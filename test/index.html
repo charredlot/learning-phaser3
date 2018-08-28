@@ -1,0 +1,214 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>test</title>
+    <script src="/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+"use strict";
+
+/* probably introducing some rounding error here */
+let halfWidth = window.innerWidth * window.devicePixelRatio * 0.6 / 2;
+let halfHeight = window.innerHeight * window.devicePixelRatio * 0.6 / 2;
+var config = {
+    type: Phaser.AUTO,
+    width: halfWidth * 2,
+    height: halfHeight * 2,
+    disableContextMenu: true,
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    }
+};
+
+/* assumes highest supported DPR is 3 */
+let imgScale = window.devicePixelRatio / 3;
+let unitSize = 128;
+let UNIT_SELECTED_IMG = "pink_cursor";
+let UNIT_MOVE_IMG = "pink_target";
+
+function SceneState() {
+    this.units = [];
+    this.selected_unit = null;
+    this.ui_state = SceneState.prototype.UI_STATE_NONE;
+}
+SceneState.prototype.UI_STATE_NONE = 0;
+SceneState.prototype.UI_STATE_SELECTED = 1;
+SceneState.prototype.UI_STATE_TARGETING = 2;
+
+function PlayerUnit(id, display_name, asset_path) {
+    this.id = id;
+    this.display_name = display_name;
+    this.asset_path = asset_path;
+    this.container = null;
+    this.sprite = null;
+    this.cursor = null;
+    this.move_target = null;
+    this.has_move_target = false;
+    this.move_speed = 5;
+}
+
+let units = [
+    new PlayerUnit('clover', "Clover", "assets/ferretything.png"),
+]
+
+var gameOver = false;
+var game = new Phaser.Game(config);
+
+var debugScene;
+var debugState;
+var debugThing;
+
+function preload () {
+    this.load.image('sky', 'assets/sky.png');
+    this.load.image('clover', 'assets/ferretything.png');
+    this.load.image('ground', 'assets/platform.png');
+    this.load.image('star', 'assets/star.png');
+    this.load.image(UNIT_SELECTED_IMG, 'assets/pink_cursor.png');
+    this.load.image(UNIT_MOVE_IMG, 'assets/pink_target.png');
+    
+    let len = units.length;
+    for (let i = 0; i < len; i++) {
+        let unit = units[i];
+        this.load.image(unit.id, unit.asset_path);
+    }
+}
+
+function create () {
+    this.scene_state = new SceneState();
+    
+    this.add.image(halfWidth, halfHeight, 'sky');
+
+    let len = units.length;
+    for (let i = 0; i < len; i++) {
+        let unit = units[i];
+        
+        let container = this.add.container(0, 0);
+        let s = this.add.sprite(0, 0, units[i].id);
+        let cursor = this.add.sprite(0, 0, UNIT_SELECTED_IMG);
+        let move_target = this.add.sprite(0, 0, UNIT_MOVE_IMG);
+        
+        // container is the parent
+        container.add(s);
+        container.add(cursor);
+        
+        container.x = s.displayWidth / 2;
+        container.y = ((i + 1) * s.displayHeight) + (s.displayHeight / 2);
+                
+        s.setInteractive();
+        s.player_unit = units[i];
+        
+        cursor.visible = false;
+        move_target.visible = false;
+                
+        unit.container = container;
+        unit.sprite = s;
+        unit.cursor = cursor;
+        unit.move_target = move_target;
+        
+        this.scene_state.units.push(unit);
+    }
+    
+    this.input.on("gameobjectdown", objectClicked);
+    
+    debugScene = this;
+    debugState = this.scene_state;
+}
+
+function objectClicked(ptr, obj) {
+    // not sure on ordering guarantees between this and update    
+    let state = this.scene.scene_state;
+    state.ui_state = SceneState.prototype.UI_STATE_SELECTED;
+    state.selected_unit = obj.player_unit;
+    obj.player_unit.cursor.visible = true;
+      
+    // this seems hella janky, but we don't want a dup event in the update loop
+    ptr.justDown = false;
+}
+
+function clamp_movement(orig_v, dv, target_v) {
+    let new_v = orig_v + dv;
+    
+    if (dv < 0) {
+        if (new_v < target_v) {
+            new_v = target_v;
+        }
+    }
+    else {
+        if (new_v > target_v) {
+            new_v = target_v;
+        }
+    }
+    
+    return Math.round(new_v);
+}
+
+function steer_units(state) {
+    let len = state.units.length;
+    for (let i = 0; i < len; i++) {
+        let unit = state.units[i];
+        
+        if (!unit.has_move_target) {
+            continue;
+        }
+        
+        let dx = unit.move_target.x - unit.container.x;
+        let dy = unit.move_target.y - unit.container.y;        
+        let dist = Math.sqrt((dx * dx) + (dy * dy));
+        
+        if (dist < Number.EPSILON) {
+            unit.has_move_target = false;
+            unit.move_target.visible = false;
+            continue;
+        }
+        
+        let move_dx = (dx / dist) * unit.move_speed;
+        let move_dy = (dy / dist) * unit.move_speed;
+        
+        // need some logic to not overshoot
+        unit.container.x = clamp_movement(unit.container.x,
+                                          move_dx,
+                                          unit.move_target.x);
+        unit.container.y = clamp_movement(unit.container.y,
+                                          move_dy,
+                                          unit.move_target.y);
+    }
+}
+
+function update () {
+    if (gameOver) {
+        return;
+    }
+    let state = this.scene_state;
+    
+    let ap = this.input.activePointer;
+        debugThing = ap;
+    if (ap.justDown) {
+        if ((state.ui_state == SceneState.prototype.UI_STATE_SELECTED) &&
+            (ap.leftButtonDown() != 0)) {
+            let unit = state.selected_unit;
+            
+            unit.move_target.x = Math.round(ap.position.x);
+            unit.move_target.y = Math.round(ap.position.y);
+            unit.move_target.visible = true;
+            unit.has_move_target = true;
+            
+            console.log("move to " + unit.move_target.x + "," + unit.move_target.y);
+        }
+    }
+    
+    steer_units(state);
+}
+</script>
+
+</body>
+</html>
