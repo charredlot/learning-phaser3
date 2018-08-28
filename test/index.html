@@ -4,9 +4,16 @@
     <meta charset="UTF-8" />
     <title>test</title>
     <script src="/phaser.js"></script>
+    <script src="/jquery-3.3.1.js"></script>
     <style type="text/css">
         body {
             margin: 0;
+        }
+        .skillsui {
+            border: 5px solid black;
+        }
+        .skillselected {
+            border: 5px solid red;
         }
     </style>
 </head>
@@ -14,6 +21,21 @@
 
 <script type="text/javascript">
 "use strict";
+
+var sceneState;
+var game;
+
+window.onload = function() {
+    $('.skillsui').click(function () {
+        $('.skillsui').removeClass('skillselected');
+        $(this).addClass('skillselected');
+    })
+    
+    sceneState = new SceneState();
+    game = new Phaser.Game(config);
+     
+};
+
 
 /* probably introducing some rounding error here */
 let halfWidth = window.innerWidth * window.devicePixelRatio * 0.6 / 2;
@@ -40,6 +62,7 @@ function SceneState() {
     this.units = [];
     this.selected_unit = null;
     this.ui_state = SceneState.prototype.UI_STATE_NONE;
+    this.skill_keys = {};
 }
 SceneState.prototype.UI_STATE_NONE = 0;
 SceneState.prototype.UI_STATE_SELECTED = 1;
@@ -62,10 +85,8 @@ let units = [
 ]
 
 var gameOver = false;
-var game = new Phaser.Game(config);
 
 var debugScene;
-var debugState;
 var debugThing;
 
 function preload () {
@@ -84,7 +105,7 @@ function preload () {
 }
 
 function create () {
-    this.scene_state = new SceneState();
+    this.scene_state = sceneState;
     
     this.add.image(halfWidth, halfHeight, 'sky');
 
@@ -120,8 +141,22 @@ function create () {
     
     this.input.on("gameobjectdown", objectClicked);
     
+        
+    // warning: these are numbers, they become strings if they're object keys
+    let codes = [
+        Phaser.Input.Keyboard.KeyCodes.ONE,
+        Phaser.Input.Keyboard.KeyCodes.TWO,
+        Phaser.Input.Keyboard.KeyCodes.THREE,
+        Phaser.Input.Keyboard.KeyCodes.FOUR,
+        Phaser.Input.Keyboard.KeyCodes.FIVE,
+        Phaser.Input.Keyboard.KeyCodes.SIX,
+    ];
+    for (let i in codes) {
+        let key = this.input.keyboard.addKey(codes[i]);
+        this.scene_state.skill_keys[codes[i]] = key;
+    }
+    
     debugScene = this;
-    debugState = this.scene_state;
 }
 
 function objectClicked(ptr, obj) {
@@ -189,9 +224,8 @@ function update () {
         return;
     }
     let state = this.scene_state;
-    
+        
     let ap = this.input.activePointer;
-        debugThing = ap;
     if (ap.justDown) {
         if ((state.ui_state == SceneState.prototype.UI_STATE_SELECTED) &&
             (ap.leftButtonDown() != 0)) {
@@ -206,9 +240,23 @@ function update () {
         }
     }
     
+    for (let code in state.skill_keys) {
+        let key = state.skill_keys[code];
+        if (Phaser.Input.Keyboard.JustDown(key)) {
+            console.log("pressed " + code.toString());
+        }
+    }
+    
     steer_units(state);
 }
 </script>
-
+<div id="skills">
+    <input type="button" class="skillsui" id="skill1" value="Skill1">
+    <input type="button" class="skillsui" id="skill2" value="Skill2">
+    <input type="button" class="skillsui" id="skill3" value="Skill3">
+    <input type="button" class="skillsui" id="skill4" value="Skill4">
+    <input type="button" class="skillsui" id="skill5" value="Skill5">
+    <input type="button" class="skillsui" id="skill6" value="Skill6">
+</div>
 </body>
 </html>
