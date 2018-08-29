@@ -31,7 +31,6 @@ window.onload = function() {
      
 };
 
-
 /* probably introducing some rounding error here */
 let halfWidth = window.innerWidth * window.devicePixelRatio * 0.6 / 2;
 let halfHeight = window.innerHeight * window.devicePixelRatio * 0.6 / 2;
@@ -51,7 +50,6 @@ var config = {
 let imgScale = window.devicePixelRatio / 3;
 let unitSize = 128;
 let UNIT_SELECTED_IMG = "pink_cursor";
-let UNIT_MOVE_IMG = "pink_target";
 
 function SceneState() {
     this.units = [];
@@ -63,11 +61,15 @@ SceneState.prototype.UI_STATE_NONE = 0;
 SceneState.prototype.UI_STATE_SELECTED = 1;
 SceneState.prototype.UI_STATE_TARGETING = 2;
 
-function PlayerUnit(display_name, asset_path, skills) {
+function PlayerUnit(display_name,
+                    char_asset_path,
+                    move_asset_path,
+                    skills) {
     /* html IDs can't have spaces */
     this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
-    this.asset_path = asset_path;
+    this.char_asset_path = char_asset_path;
+    this.move_asset_path = move_asset_path;
     this.container = null;
     this.sprite = null;
     this.cursor = null;
@@ -75,6 +77,9 @@ function PlayerUnit(display_name, asset_path, skills) {
     this.has_move_target = false;
     this.move_speed = 5;
     this.skills = skills;
+}
+PlayerUnit.prototype.move_img = function () {
+    return this.name + "_move";
 }
 
 function Skill(display_name) {
@@ -84,7 +89,9 @@ function Skill(display_name) {
 }
 
 let units = [
-    new PlayerUnit("Clover", "assets/ferretything.png",
+    new PlayerUnit("Clover",
+                   "assets/ferretything.png",
+                   "assets/green_target32.png",
                    [
                     new Skill("Entangle"),
                     new Skill("Vine Pull"),
@@ -104,12 +111,12 @@ function preload () {
     this.load.image('ground', 'assets/platform.png');
     this.load.image('star', 'assets/star.png');
     this.load.image(UNIT_SELECTED_IMG, 'assets/pink_cursor.png');
-    this.load.image(UNIT_MOVE_IMG, 'assets/pink_target.png');
     
     let len = units.length;
     for (let i = 0; i < len; i++) {
         let unit = units[i];
-        this.load.image(unit.name, unit.asset_path);
+        this.load.image(unit.name, unit.char_asset_path);
+        this.load.image(unit.move_img(), unit.move_asset_path);
     }
 }
 
@@ -125,7 +132,7 @@ function create () {
         let container = this.add.container(0, 0);
         let s = this.add.sprite(0, 0, unit.name);
         let cursor = this.add.sprite(0, 0, UNIT_SELECTED_IMG);
-        let move_target = this.add.sprite(0, 0, UNIT_MOVE_IMG);
+        let move_target = this.add.sprite(0, 0, unit.move_img());
         
         // container is the parent
         container.add(s);
