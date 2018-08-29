@@ -86,6 +86,10 @@ function Skill(display_name) {
     /* html IDs can't have spaces */
     this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
+    this.callback = null;
+}
+Skill.prototype.dom_id = function(unit) {
+    return "skill_" + unit.name + "_" + this.name;
 }
 
 let units = [
@@ -152,6 +156,11 @@ function create () {
         unit.cursor = cursor;
         unit.move_target = move_target;
         
+        for (let j in unit.skills) {
+            let skill = unit.skills[j];
+            skill.callback = skillCallback(unit, skill);
+        }
+        
         this.scene_state.units.push(unit);
     }
     
@@ -175,6 +184,14 @@ function create () {
     debugScene = this;
 }
 
+function skillCallback(unit, skill) {
+    return function() {
+        $('.skillsui').removeClass('skillselected');
+        $('#' + skill.dom_id(unit)).addClass('skillselected');
+        console.log("clicked " + skill.name);
+    }
+}
+
 function setSkills(unit) {
     let skill_list_id = "skilllist_" + unit.name;
     let skill_list_dom = document.getElementById(skill_list_id);
@@ -192,22 +209,19 @@ function setSkills(unit) {
         
         for (let i in unit.skills) {
             let skill = unit.skills[i];
-            let skill_id = "skill_" + unit.name + "_" + skill.name;
+            let skill_id = skill.dom_id(unit);
             let skill_obj = $('#skilltemplate').clone();
             
             skill_obj.attr('id', skill_id);
             skill_obj.attr('value', skill.display_name);
             skill_obj.css('display', 'inline');
             skill_obj.css('visibility', 'visible');
+            skill_obj.click(skill.callback);
+            
             skill_list.append(skill_obj);
         }
         
         $('#skills').append(skill_list);
-        
-        $('.skillsui').click(function () {
-            $('.skillsui').removeClass('skillselected');
-            $(this).addClass('skillselected');
-        })
     }
     
     skill_list.css('visibility', 'visible');    
@@ -282,18 +296,36 @@ function steer_units(state) {
     }
 }
 
+function keyCodeToSkillNumber(code) {
+    // probably want configurable keys later
+    switch (parseInt(code, 10)) {
+        case Phaser.Input.Keyboard.KeyCodes.ONE:
+            return 0;
+        case Phaser.Input.Keyboard.KeyCodes.TWO:
+            return 1;
+        case Phaser.Input.Keyboard.KeyCodes.THREE:
+            return 2;
+        case Phaser.Input.Keyboard.KeyCodes.FOUR:
+            return 3;
+        case Phaser.Input.Keyboard.KeyCodes.FIVE:
+            return 4;
+        case Phaser.Input.Keyboard.KeyCodes.SIX:
+            return 5;
+    }
+    return null;
+}
+
 function update () {
     if (gameOver) {
         return;
     }
     let state = this.scene_state;
+    let unit = state.selected_unit;
         
     let ap = this.input.activePointer;
     if (ap.justDown) {
         if ((state.ui_state == SceneState.prototype.UI_STATE_SELECTED) &&
             (ap.leftButtonDown() != 0)) {
-            let unit = state.selected_unit;
-            
             unit.move_target.x = Math.round(ap.position.x);
             unit.move_target.y = Math.round(ap.position.y);
             unit.move_target.visible = true;
@@ -303,10 +335,20 @@ function update () {
         }
     }
     
-    for (let code in state.skill_keys) {
-        let key = state.skill_keys[code];
-        if (Phaser.Input.Keyboard.JustDown(key)) {
-            console.log("pressed " + code.toString());
+    if (unit) {
+        for (let code in state.skill_keys) {
+            let key = state.skill_keys[code];
+            if (!Phaser.Input.Keyboard.JustDown(key)) {
+                continue;
+            }
+            
+            let n = keyCodeToSkillNumber(code);
+            if (n >= unit.skills.length) {
+                continue;
+            }
+            
+            unit.skills[n].callback();
+            break;
         }
     }
     
