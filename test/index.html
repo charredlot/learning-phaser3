@@ -25,12 +25,7 @@
 var sceneState;
 var game;
 
-window.onload = function() {
-    $('.skillsui').click(function () {
-        $('.skillsui').removeClass('skillselected');
-        $(this).addClass('skillselected');
-    })
-    
+window.onload = function() {   
     sceneState = new SceneState();
     game = new Phaser.Game(config);
      
@@ -68,8 +63,9 @@ SceneState.prototype.UI_STATE_NONE = 0;
 SceneState.prototype.UI_STATE_SELECTED = 1;
 SceneState.prototype.UI_STATE_TARGETING = 2;
 
-function PlayerUnit(id, display_name, asset_path) {
-    this.id = id;
+function PlayerUnit(display_name, asset_path, skills) {
+    /* html IDs can't have spaces */
+    this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
     this.asset_path = asset_path;
     this.container = null;
@@ -78,10 +74,23 @@ function PlayerUnit(id, display_name, asset_path) {
     this.move_target = null;
     this.has_move_target = false;
     this.move_speed = 5;
+    this.skills = skills;
+}
+
+function Skill(display_name) {
+    /* html IDs can't have spaces */
+    this.name = display_name.replace(/\s/g, '');
+    this.display_name = display_name;
 }
 
 let units = [
-    new PlayerUnit('clover', "Clover", "assets/ferretything.png"),
+    new PlayerUnit("Clover", "assets/ferretything.png",
+                   [
+                    new Skill("Entangle"),
+                    new Skill("Vine Pull"),
+                    new Skill("Leaf Burst"),
+                   ]
+                  ),
 ]
 
 var gameOver = false;
@@ -100,7 +109,7 @@ function preload () {
     let len = units.length;
     for (let i = 0; i < len; i++) {
         let unit = units[i];
-        this.load.image(unit.id, unit.asset_path);
+        this.load.image(unit.name, unit.asset_path);
     }
 }
 
@@ -114,7 +123,7 @@ function create () {
         let unit = units[i];
         
         let container = this.add.container(0, 0);
-        let s = this.add.sprite(0, 0, units[i].id);
+        let s = this.add.sprite(0, 0, unit.name);
         let cursor = this.add.sprite(0, 0, UNIT_SELECTED_IMG);
         let move_target = this.add.sprite(0, 0, UNIT_MOVE_IMG);
         
@@ -159,12 +168,59 @@ function create () {
     debugScene = this;
 }
 
+function setSkills(unit) {
+    let skill_list_id = "skilllist_" + unit.name;
+    let skill_list_dom = document.getElementById(skill_list_id);
+    let skill_list = null;
+    
+    /* TODO: hide the old skill list or maybe just remove children */
+    
+    if (skill_list_dom) {
+        skill_list = $(skill_list_dom);
+    }
+    else {
+        skill_list = $('#skilllisttemplate').clone();
+        skill_list.attr('id', skill_list_id);
+        skill_list.empty();
+        
+        for (let i in unit.skills) {
+            let skill = unit.skills[i];
+            let skill_id = "skill_" + unit.name + "_" + skill.name;
+            let skill_obj = $('#skilltemplate').clone();
+            
+            skill_obj.attr('id', skill_id);
+            skill_obj.attr('value', skill.display_name);
+            skill_obj.css('display', 'inline');
+            skill_obj.css('visibility', 'visible');
+            skill_list.append(skill_obj);
+        }
+        
+        $('#skills').append(skill_list);
+        
+        $('.skillsui').click(function () {
+            $('.skillsui').removeClass('skillselected');
+            $(this).addClass('skillselected');
+        })
+    }
+    
+    skill_list.css('visibility', 'visible');    
+    /* TODO: do this stuff exactly once */    
+    $('#skilltemplate').css('display', 'none');
+    $('#skilllisttemplate').css('display', 'none');
+    $('#skills').css('visibility', 'visible');
+}
+
 function objectClicked(ptr, obj) {
     // not sure on ordering guarantees between this and update    
     let state = this.scene.scene_state;
-    state.ui_state = SceneState.prototype.UI_STATE_SELECTED;
-    state.selected_unit = obj.player_unit;
-    obj.player_unit.cursor.visible = true;
+    
+    if (state.selected_unit !== obj.player_unit) {
+        state.ui_state = SceneState.prototype.UI_STATE_SELECTED;
+        state.selected_unit = obj.player_unit;
+        obj.player_unit.cursor.visible = true;
+        
+        setSkills(obj.player_unit);
+    }
       
     // this seems hella janky, but we don't want a dup event in the update loop
     ptr.justDown = false;
@@ -250,13 +306,12 @@ function update () {
     steer_units(state);
 }
 </script>
-<div id="skills">
-    <input type="button" class="skillsui" id="skill1" value="Skill1">
-    <input type="button" class="skillsui" id="skill2" value="Skill2">
-    <input type="button" class="skillsui" id="skill3" value="Skill3">
-    <input type="button" class="skillsui" id="skill4" value="Skill4">
-    <input type="button" class="skillsui" id="skill5" value="Skill5">
-    <input type="button" class="skillsui" id="skill6" value="Skill6">
+<div id="skills" style="visibility: collapse;">
+    <div id="skilllisttemplate" style="visibility: collapse;">
+        <input type="button" class="skillsui" id="skilltemplate" value="Skill1"
+               style="visibility: collapse;">
+    </div>
 </div>
+
 </body>
 </html>
