@@ -65,28 +65,22 @@ SceneState.prototype.UI_STATE_CASTING = 3;
 function PlayerUnit(display_name,
                     char_asset_path,
                     move_target_path,
-                    move_cursor_path,
                     skills) {
     /* html IDs can't have spaces */
     this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
     this.char_asset_path = char_asset_path;
     this.move_target_path = move_target_path;
-    this.move_cursor_path = move_cursor_path;
     this.container = null;
     this.sprite = null;
     this.cursor = null;
     this.move_target = null;
     this.has_move_target = false;
-    this.move_cursor = null;
     this.move_speed = 5;
     this.skills = skills;
 }
 PlayerUnit.prototype.move_target_img = function () {
     return this.name + "_movetarget";
-}
-PlayerUnit.prototype.move_cursor_img = function () {
-    return this.name + "_movecursor";
 }
 PlayerUnit.prototype.setMoveTarget = function (pos) {
     this.move_target.x = Math.round(pos.x);
@@ -112,7 +106,6 @@ let units = [
     new PlayerUnit("Clover",
                    "assets/ferretything.png",
                    "assets/green_target18.png",
-                    "assets/green_target32.png",
                    [
                     new Skill("Entangle"),
                     new Skill("Vine Pull"),
@@ -138,7 +131,6 @@ function preload () {
         let unit = units[i];
         this.load.image(unit.name, unit.char_asset_path);
         this.load.image(unit.move_target_img(), unit.move_target_path);
-        this.load.image(unit.move_cursor_img(), unit.move_cursor_path);
     }
 }
 
@@ -155,7 +147,6 @@ function create () {
         let s = this.add.sprite(0, 0, unit.name);
         let cursor = this.add.sprite(0, 0, UNIT_SELECTED_IMG);
         let move_target = this.add.sprite(0, 0, unit.move_target_img());
-        let move_cursor = this.add.sprite(0, 0, unit.move_cursor_img());
         
         // container is the parent
         container.add(s);
@@ -169,13 +160,11 @@ function create () {
         
         cursor.visible = false;
         move_target.visible = false;
-        move_cursor.visible = false;
                 
         unit.container = container;
         unit.sprite = s;
         unit.cursor = cursor;
         unit.move_target = move_target;
-        unit.move_cursor = move_cursor;
         
         for (let j in unit.skills) {
             let skill = unit.skills[j];
@@ -263,10 +252,6 @@ function objectClicked(ptr, obj) {
         state.selected_unit = unit;
         
         unit.cursor.visible = true;
-        
-        unit.move_cursor.x = Math.round(ptr.position.x);
-        unit.move_cursor.y = Math.round(ptr.position.y);     
-        unit.move_cursor.visible = true;
         
         setSkills(obj.player_unit);
     }
@@ -371,8 +356,7 @@ function checkUnitKeys(state, unit) {
             continue;
         }
 
-        state.ui_state = SceneState.prototype.UI_STATE_TARGET_SKILL;
-        unit.move_cursor.visible = false;            
+        state.ui_state = SceneState.prototype.UI_STATE_TARGET_SKILL;          
         unit.skills[i].target_callback();
         break;
     }
