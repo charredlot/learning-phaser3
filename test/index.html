@@ -93,14 +93,19 @@ PlayerUnit.prototype.setMoveTarget = function (pos) {
                  this.move_target.y);
 }
 
-function Skill(display_name) {
+function Skill(display_name, cursor_callback) {
     /* html IDs can't have spaces */
     this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
-    this.target_callback = null;
+    this.cursor_callback = cursor_callback;
 }
 Skill.prototype.dom_id = function(unit) {
     return "skill_" + unit.name + "_" + this.name;
+}
+Skill.prototype.selected = function(unit) {
+    $('.skillsui').removeClass('skillselected');
+    $('#' + this.dom_id(unit)).addClass('skillselected');
+    console.log("clicked " + this.name);
 }
 
 let units = [
@@ -108,9 +113,9 @@ let units = [
                    "assets/ferretything.png",
                    "assets/green_target18.png",
                    [
-                    new Skill("Entangle"),
-                    new Skill("Vine Pull"),
-                    new Skill("Leaf Burst"),
+                    new Skill("Entangle", function(state, unit, ap) {}),
+                    new Skill("Vine Pull", function(state, unit, ap) {}),
+                    new Skill("Leaf Burst", function(state, unit, ap) {}),
                    ]
                   ),
 ]
@@ -167,11 +172,6 @@ function create () {
         unit.cursor = cursor;
         unit.move_target = move_target;
         
-        for (let j in unit.skills) {
-            let skill = unit.skills[j];
-            skill.target_callback = skillTargetCallback(unit, skill);
-        }
-        
         this.scene_state.units.push(unit);
     }
     
@@ -193,14 +193,6 @@ function create () {
     }
     
     debugScene = this;
-}
-
-function skillTargetCallback(unit, skill) {
-    return function() {
-        $('.skillsui').removeClass('skillselected');
-        $('#' + skill.dom_id(unit)).addClass('skillselected');
-        console.log("clicked " + skill.name);
-    }
 }
 
 function setSkills(unit) {
@@ -227,7 +219,7 @@ function setSkills(unit) {
             skill_obj.attr('value', skill.display_name);
             skill_obj.css('display', 'inline');
             skill_obj.css('visibility', 'visible');
-            skill_obj.click(skill.target_callback);
+            skill_obj.click(function() { skill.selected(unit); });
             
             skill_list.append(skill_obj);
         }
@@ -330,18 +322,24 @@ function keyCodeToSkillNumber(code) {
 }
 
 function handleUnitClicks(state, unit, ap) {
-    if (ap.justDown) {
-        if (state.ui_state !== SceneState.prototype.UI_STATE_UNSELECTED) {
-            if (ap.rightButtonDown() != 0) {
-                unit.setMoveTarget(ap.position);
-            }
-        }
+    if (state.ui_state === SceneState.prototype.UI_STATE_UNSELECTED) {
+        return;
+    }
+    
+    if (!ap.justDown) {
+        return;
+    }
+    
+    if (ap.rightButtonDown() != 0) {
+        unit.setMoveTarget(ap.position);
     }
 }
 
 function updateUnitCursor(state, unit, ap) {
     if (state.ui_state === SceneState.prototype.UI_STATE_TARGET_SKILL) {
-        /* TODO: fill in later */
+        let skill = state.selected_skill;
+        
+        skill.cursor_callback(state, unit, ap);
     }
 }
 
@@ -368,7 +366,7 @@ function checkUnitKeys(state, unit) {
         else {
             state.ui_state = SceneState.prototype.UI_STATE_TARGET_SKILL;
             state.selected_skill = unit.skills[i];
-            state.selected_skill.target_callback();
+            state.selected_skill.selected(unit);
         }
         break;
     }
