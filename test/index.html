@@ -93,16 +93,21 @@ PlayerUnit.prototype.setMoveTarget = function (pos) {
                  this.move_target.y);
 }
 
-function Skill(display_name, cursor_callback) {
+function Skill(display_name, preload, create, selected, deselected, updateCursor) {
     /* html IDs can't have spaces */
     this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
-    this.cursor_callback = cursor_callback;
+    
+    this.preload = preload;
+    this.create = create;
+    this.selected = selected;
+    this.deselected = deselected;
+    this.updateCursor = updateCursor;
 }
 Skill.prototype.dom_id = function(unit) {
     return "skill_" + unit.name + "_" + this.name;
 }
-Skill.prototype.selected = function(unit) {
+Skill.prototype.selectedUpdateUI = function(unit) {
     $('.skillsui').removeClass('skillselected');
     $('#' + this.dom_id(unit)).addClass('skillselected');
     console.log("clicked " + this.name);
@@ -113,9 +118,39 @@ let units = [
                    "assets/ferretything.png",
                    "assets/green_target18.png",
                    [
-                    new Skill("Entangle", function(state, unit, ap) {}),
-                    new Skill("Vine Pull", function(state, unit, ap) {}),
-                    new Skill("Leaf Burst", function(state, unit, ap) {}),
+                    new Skill("Entangle",
+                              function(scene) {
+                                 /* TODO: clean up */
+                                 scene.load.image('entangle_target', 'assets/entangle_target_green.png');
+                              },
+                              function(scene) {
+                                 let target = scene.add.sprite(0, 0, 'entangle_target');
+                                 target.visible = false;
+                                 this.cursor_target = target;
+                              },
+                              function(unit) {
+                                 this.cursor_target.visible = true;
+                              },
+                              function(unit) {
+                                 this.cursor_target.visible = false;
+                              },
+                              function(state, unit, ap) {
+                                 this.cursor_target.x = ap.position.x;
+                                 this.cursor_target.y = ap.position.y;
+                              }
+                    ),
+                    new Skill("Vine Pull",
+                              function(scene) {},
+                              function(scene) {},
+                              function(unit) {},
+                              function(unit) {},
+                              function(state, unit, ap) {}),
+                    new Skill("Leaf Burst",
+                              function(scene) {},
+                              function(scene) {},
+                              function(unit) {},
+                              function(unit) {},
+                              function(state, unit, ap) {}),
                    ]
                   ),
 ]
@@ -127,16 +162,20 @@ var debugThing;
 
 function preload () {
     this.load.image('sky', 'assets/sky.png');
-    this.load.image('clover', 'assets/ferretything.png');
     this.load.image('ground', 'assets/platform.png');
     this.load.image('star', 'assets/star.png');
     this.load.image(UNIT_SELECTED_IMG, 'assets/pink_cursor.png');
+    this.load.image('green_square96', 'assets/green_square96.png');
     
     let len = units.length;
     for (let i = 0; i < len; i++) {
         let unit = units[i];
         this.load.image(unit.name, unit.char_asset_path);
         this.load.image(unit.move_target_img(), unit.move_target_path);
+        
+        for (let j in unit.skills) {
+            unit.skills[j].preload(this);
+        }
     }
 }
 
@@ -171,6 +210,10 @@ function create () {
         unit.sprite = s;
         unit.cursor = cursor;
         unit.move_target = move_target;
+        
+        for (let j in unit.skills) {
+            unit.skills[j].create(this);
+        }
         
         this.scene_state.units.push(unit);
     }
@@ -339,7 +382,11 @@ function updateUnitCursor(state, unit, ap) {
     if (state.ui_state === SceneState.prototype.UI_STATE_TARGET_SKILL) {
         let skill = state.selected_skill;
         
-        skill.cursor_callback(state, unit, ap);
+        /*
+         * XXX: probably want to find commonalities so this function can be
+         * genericized but for now let them be tightly coupled
+         */
+        skill.updateCursor(state, unit, ap);
     }
 }
 
@@ -357,16 +404,22 @@ function checkUnitKeys(state, unit) {
         
         if (state.selected_skill === unit.skills[i]) {
             /* deselect skill */
+            let skill = state.selected_skill;
+            
             state.ui_state = SceneState.prototype.UI_STATE_SELECTED;
             state.selected_skill = null;
             
-            /* TODO: this seems to be really sluggish */
-            $('.skillsui').removeClass('skillselected');
+            $('#' + skill.dom_id(unit)).removeClass('skillselected');
+            skill.deselected(unit);
         }
         else {
+            let skill = unit.skills[i];
+            
+            skill.selectedUpdateUI(unit);
+            skill.selected(unit);
+            
             state.ui_state = SceneState.prototype.UI_STATE_TARGET_SKILL;
-            state.selected_skill = unit.skills[i];
-            state.selected_skill.selected(unit);
+            state.selected_skill = skill;
         }
         break;
     }
@@ -387,9 +440,8 @@ function update () {
         
         /* state is somewhat redundant, but unit should always be non-null */
         handleUnitClicks(state, unit, ap);
-        updateUnitCursor(state, unit, ap)
-        
         checkUnitKeys(state, unit);
+        updateUnitCursor(state, unit, ap);
     }
     
     steer_units(state);
