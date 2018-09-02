@@ -54,12 +54,13 @@ let UNIT_SELECTED_IMG = "pink_cursor";
 function SceneState() {
     this.units = [];
     this.selected_unit = null;
-    this.ui_state = SceneState.prototype.UI_STATE_NONE;
+    this.ui_state = SceneState.prototype.UI_STATE_UNSELECTED;
     this.skill_keys = {};
 }
-SceneState.prototype.UI_STATE_NONE = 0;
+SceneState.prototype.UI_STATE_UNSELECTED = 0;
 SceneState.prototype.UI_STATE_SELECTED = 1;
-SceneState.prototype.UI_STATE_TARGETING = 2;
+SceneState.prototype.UI_STATE_TARGET_SKILL = 2;
+SceneState.prototype.UI_STATE_CASTING = 3;
 
 function PlayerUnit(display_name,
                     char_asset_path,
@@ -87,12 +88,21 @@ PlayerUnit.prototype.move_target_img = function () {
 PlayerUnit.prototype.move_cursor_img = function () {
     return this.name + "_movecursor";
 }
+PlayerUnit.prototype.setMoveTarget = function (pos) {
+    this.move_target.x = Math.round(pos.x);
+    this.move_target.y = Math.round(pos.y);
+    this.move_target.visible = true;
+    this.has_move_target = true;
+    
+    console.log("move to " + this.move_target.x + "," +
+                 this.move_target.y);
+}
 
 function Skill(display_name) {
     /* html IDs can't have spaces */
     this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
-    this.callback = null;
+    this.target_callback = null;
 }
 Skill.prototype.dom_id = function(unit) {
     return "skill_" + unit.name + "_" + this.name;
@@ -102,7 +112,7 @@ let units = [
     new PlayerUnit("Clover",
                    "assets/ferretything.png",
                    "assets/green_target18.png",
-                   "assets/green_target32.png",
+                    "assets/green_target32.png",
                    [
                     new Skill("Entangle"),
                     new Skill("Vine Pull"),
@@ -169,7 +179,7 @@ function create () {
         
         for (let j in unit.skills) {
             let skill = unit.skills[j];
-            skill.callback = skillCallback(unit, skill);
+            skill.target_callback = skillTargetCallback(unit, skill);
         }
         
         this.scene_state.units.push(unit);
@@ -195,7 +205,7 @@ function create () {
     debugScene = this;
 }
 
-function skillCallback(unit, skill) {
+function skillTargetCallback(unit, skill) {
     return function() {
         $('.skillsui').removeClass('skillselected');
         $('#' + skill.dom_id(unit)).addClass('skillselected');
@@ -227,7 +237,7 @@ function setSkills(unit) {
             skill_obj.attr('value', skill.display_name);
             skill_obj.css('display', 'inline');
             skill_obj.css('visibility', 'visible');
-            skill_obj.click(skill.callback);
+            skill_obj.click(skill.target_callback);
             
             skill_list.append(skill_obj);
         }
@@ -243,7 +253,7 @@ function setSkills(unit) {
 }
 
 function objectClicked(ptr, obj) {
-    // not sure on ordering guarantees between this and update    
+    // XXX: not sure on ordering guarantees between this and update    
     let state = this.scene.scene_state;
 
     if (state.selected_unit !== obj.player_unit) {
@@ -261,7 +271,7 @@ function objectClicked(ptr, obj) {
         setSkills(obj.player_unit);
     }
       
-    // this seems hella janky, but we don't want a dup event in the update loop
+    // XXX: this seems hella janky, but we don't want a dup event in the update loop
     ptr.justDown = false;
 }
 
@@ -333,46 +343,59 @@ function keyCodeToSkillNumber(code) {
     return null;
 }
 
+function handleUnitClicks(state, unit, ap) {
+    if (ap.justDown) {
+        if (state.ui_state !== SceneState.prototype.UI_STATE_UNSELECTED) {
+            if (ap.rightButtonDown() != 0) {
+                unit.setMoveTarget(ap.position);
+            }
+        }
+    }
+}
+
+function updateUnitCursor(state, unit, ap) {
+    if (state.ui_state === SceneState.prototype.UI_STATE_TARGET_SKILL) {
+        /* TODO: fill in later */
+    }
+}
+
+function checkUnitKeys(state, unit) {
+    for (let code in state.skill_keys) {
+        let key = state.skill_keys[code];
+        if (!Phaser.Input.Keyboard.JustDown(key)) {
+            continue;
+        }
+        
+        let i = keyCodeToSkillNumber(code);
+        if (i >= unit.skills.length) {
+            continue;
+        }
+
+        state.ui_state = SceneState.prototype.UI_STATE_TARGET_SKILL;
+        unit.move_cursor.visible = false;            
+        unit.skills[i].target_callback();
+        break;
+    }
+}
+
 function update () {
     if (gameOver) {
         return;
     }
     let state = this.scene_state;
     let unit = state.selected_unit;
+    
+    if (state.ui_state === SceneState.prototype.UI_STATE_UNSELECTED) {
+        /* callbacks will handle clicking on player units */
+    }
+    else {
+        let ap = this.input.activePointer;
         
-    let ap = this.input.activePointer;
-    if (ap.justDown) {
-        if ((state.ui_state == SceneState.prototype.UI_STATE_SELECTED) &&
-            (ap.leftButtonDown() != 0)) {
-            unit.move_target.x = Math.round(ap.position.x);
-            unit.move_target.y = Math.round(ap.position.y);
-            unit.move_target.visible = true;
-            unit.has_move_target = true;
-            
-            console.log("move to " + unit.move_target.x + "," + unit.move_target.y);
-        }
-    }
-    
-    if ((unit != null) && unit.move_cursor.visible) {
-        unit.move_cursor.x = Math.round(ap.position.x);
-        unit.move_cursor.y = Math.round(ap.position.y);
-    }
-    
-    if (unit) {
-        for (let code in state.skill_keys) {
-            let key = state.skill_keys[code];
-            if (!Phaser.Input.Keyboard.JustDown(key)) {
-                continue;
-            }
-            
-            let n = keyCodeToSkillNumber(code);
-            if (n >= unit.skills.length) {
-                continue;
-            }
-            
-            unit.skills[n].callback();
-            break;
-        }
+        /* state is somewhat redundant, but unit should always be non-null */
+        handleUnitClicks(state, unit, ap);
+        updateUnitCursor(state, unit, ap)
+        
+        checkUnitKeys(state, unit);
     }
     
     steer_units(state);
