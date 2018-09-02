@@ -54,6 +54,7 @@ let UNIT_SELECTED_IMG = "pink_cursor";
 function SceneState() {
     this.units = [];
     this.selected_unit = null;
+    this.selected_skill = null;
     this.ui_state = SceneState.prototype.UI_STATE_UNSELECTED;
     this.skill_keys = {};
 }
@@ -355,9 +356,20 @@ function checkUnitKeys(state, unit) {
         if (i >= unit.skills.length) {
             continue;
         }
-
-        state.ui_state = SceneState.prototype.UI_STATE_TARGET_SKILL;          
-        unit.skills[i].target_callback();
+        
+        if (state.selected_skill === unit.skills[i]) {
+            /* deselect skill */
+            state.ui_state = SceneState.prototype.UI_STATE_SELECTED;
+            state.selected_skill = null;
+            
+            /* TODO: this seems to be really sluggish */
+            $('.skillsui').removeClass('skillselected');
+        }
+        else {
+            state.ui_state = SceneState.prototype.UI_STATE_TARGET_SKILL;
+            state.selected_skill = unit.skills[i];
+            state.selected_skill.target_callback();
+        }
         break;
     }
 }
