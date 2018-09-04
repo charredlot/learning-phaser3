@@ -15,6 +15,9 @@
         .skillselected {
             border: 5px solid red;
         }
+        .skillcasting {
+            border: 5px solid blue;
+        }
     </style>
 </head>
 <body>
@@ -70,7 +73,11 @@ SceneState.prototype.transition = function(new_state, ctx) {
         case SceneState.prototype.UI_STATE_SELECTED:
             if ((this.ui_state === SceneState.prototype.UI_STATE_UNSELECTED) ||
                 (this.ui_state === SceneState.prototype.UI_STATE_SELECTED)) {
+                $('.skillsui').removeClass('skillselected');
                 this.selected_unit = ctx;
+            }
+            else if (this.ui_state === SceneState.prototype.UI_STATE_CASTING) {
+                $('.skillsui').removeClass('skillcasting');
             }
             this.selected_skill = null;
             this.cast_position = null;
@@ -123,6 +130,47 @@ PlayerUnit.prototype.setMoveTarget = function (pos) {
     console.log("move to " + this.move_target.x + "," +
                  this.move_target.y);
 }
+PlayerUnit.prototype.initSkillsUI = function(state) {
+    let skill_list_id = "skilllist_" + this.name;
+    let skill_list = $('#skilllisttemplate').clone();
+    
+    skill_list.attr('id', skill_list_id);
+    skill_list.css('display', 'none');
+    skill_list.empty();
+        
+    for (let i in this.skills) {
+        let skill = this.skills[i];
+        let skill_id = skill.dom_id(this);
+        let skill_obj = $('#skilltemplate').clone();
+        
+        skill_obj.attr('id', skill_id);
+        skill_obj.attr('value', skill.display_name);
+        skill_obj.css('display', 'inline');
+        skill_obj.css('visibility', 'visible');
+        
+        /* XXX: this is a bit janky, fix later */
+        skill_obj.click(function() {
+            let is_selected = (state.selected_skill === skill);
+            skill.selectSkill(this, !is_selected);
+        });
+        
+        skill_list.append(skill_obj);
+    }
+        
+    $('#skills').append(skill_list);
+}
+PlayerUnit.prototype.showSkillsUI = function() {
+    /* TODO: hide the old skill list (by class?) or remove children */
+    let skill_list_id = "skilllist_" + this.name;
+    
+    $('#' + skill_list_id).css('display', 'block');
+    $('#' + skill_list_id).css('visibility', 'visible');
+    
+    /* TODO: do this stuff exactly once */    
+    $('#skilltemplate').css('display', 'none');
+    $('#skilllisttemplate').css('display', 'none');
+    $('#skills').css('visibility', 'visible');    
+}
 
 function Skill(display_name,
                preload,
@@ -143,13 +191,17 @@ function Skill(display_name,
 Skill.prototype.dom_id = function(unit) {
     return "skill_" + unit.name + "_" + this.name;
 }
+Skill.prototype.dom = function(unit) {
+    /* XXX: memoizeable? */
+    return $('#' + this.dom_id(unit));
+}
 Skill.prototype.selectSkill = function(unit, select) {
     if (select) {
         $('.skillsui').removeClass('skillselected');
-        $('#' + this.dom_id(unit)).addClass('skillselected');
+        this.dom(unit).addClass('skillselected');
     }
     else {
-        $('#' + this.dom_id(unit)).removeClass('skillselected');
+        this.dom(unit).removeClass('skillselected');
     }
     this._select(unit, select);
     
@@ -311,6 +363,7 @@ function create () {
              },
         );
         
+        unit.initSkillsUI(this.scene_state);
         
         this.scene_state.units.push(unit);
     }
@@ -335,50 +388,6 @@ function create () {
     debugScene = this;
 }
 
-/* TODO: move this DOM stuff to create time */
-function setSkills(unit) {
-    let skill_list_id = "skilllist_" + unit.name;
-    let skill_list_dom = document.getElementById(skill_list_id);
-    let skill_list = null;
-    
-    /* TODO: hide the old skill list or maybe just remove children */
-    
-    if (skill_list_dom) {
-        skill_list = $(skill_list_dom);
-    }
-    else {
-        skill_list = $('#skilllisttemplate').clone();
-        skill_list.attr('id', skill_list_id);
-        skill_list.empty();
-        
-        for (let i in unit.skills) {
-            let skill = unit.skills[i];
-            let skill_id = skill.dom_id(unit);
-            let skill_obj = $('#skilltemplate').clone();
-            
-            skill_obj.attr('id', skill_id);
-            skill_obj.attr('value', skill.display_name);
-            skill_obj.css('display', 'inline');
-            skill_obj.css('visibility', 'visible');
-            /* XXX: this is a bit janky, fix later */
-            skill_obj.click(function() {
-                let is_selected = sceneState.selected_skill === skill;
-                skill.selectSkill(unit, !is_selected);
-            });
-            
-            skill_list.append(skill_obj);
-        }
-        
-        $('#skills').append(skill_list);
-    }
-    
-    skill_list.css('visibility', 'visible');    
-    /* TODO: do this stuff exactly once */    
-    $('#skilltemplate').css('display', 'none');
-    $('#skilllisttemplate').css('display', 'none');
-    $('#skills').css('visibility', 'visible');
-}
-
 function objectClicked(ptr, obj) {
     // XXX: not sure on ordering guarantees between this and update    
     let state = this.scene.scene_state;
@@ -390,7 +399,7 @@ function objectClicked(ptr, obj) {
         
         unit.cursor.visible = true;
         
-        setSkills(obj.player_unit);
+        obj.player_unit.showSkillsUI();
     }
       
     // XXX: this seems hella janky, but we don't want a dup event in the update loop
@@ -481,6 +490,9 @@ function handleUnitClicks(state, unit, ap) {
     
     if (state.ui_state === SceneState.prototype.UI_STATE_TARGET_SKILL) {
         if (ap.leftButtonDown() != 0) {
+            let skill_obj = state.selected_skill.dom(unit);
+            skill_obj.removeClass('skillselected');
+            skill_obj.addClass('skillcasting');
             unit.sprite.anims.play('casting');
             state.transition(SceneState.prototype.UI_STATE_CASTING, ap.position);
         }
