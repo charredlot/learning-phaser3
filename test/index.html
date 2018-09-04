@@ -55,6 +55,7 @@ function SceneState() {
     this.units = [];
     this.selected_unit = null;
     this.selected_skill = null;
+    this.cast_position = null;
     this.ui_state = SceneState.prototype.UI_STATE_UNSELECTED;
     this.skill_keys = {};
 }
@@ -72,11 +73,15 @@ SceneState.prototype.transition = function(new_state, ctx) {
                 this.selected_unit = ctx;
             }
             this.selected_skill = null;
+            this.cast_position = null;
             break;
         case SceneState.prototype.UI_STATE_TARGET_SKILL:
             this.selected_skill = ctx;
+            this.cast_position = null;
             break;
         case SceneState.prototype.UI_STATE_CASTING:
+            /* TODO: will want unit targeted spells too */
+            this.cast_position = ctx;
             break;
         default:
             console.log("ERROR: bad state", new_state);
@@ -124,7 +129,7 @@ function Skill(display_name,
                create,
                select,
                updateCursor,
-               cast) {
+               finishCasting) {
     /* html IDs can't have spaces */
     this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
@@ -133,7 +138,7 @@ function Skill(display_name,
     this.create = create;
     this._select = select;
     this.updateCursor = updateCursor;
-    this.cast = cast;
+    this.finishCasting = finishCasting;
 }
 Skill.prototype.dom_id = function(unit) {
     return "skill_" + unit.name + "_" + this.name;
@@ -185,8 +190,11 @@ let units = [
                                  this.cursor_target.x = ap.position.x;
                                  this.cursor_target.y = ap.position.y;
                               },
-                              function(state, unit, ap) {
-                              
+                              function(state, skill) {
+                                 console.log("finishCasting",
+                                             skill.display_name,
+                                             "at",
+                                             state.cast_position);
                               },
                     ),
                     new Skill("Vine Pull",
@@ -194,14 +202,14 @@ let units = [
                               function(scene) {},
                               function(unit, select) {},
                               function(state, unit, ap) {},
-                              function(state, unit, ap) {},
+                              function(state, skill) {},
                     ),
                     new Skill("Leaf Burst",
                               function(scene) {},
                               function(scene) {},
                               function(unit, select) {},
                               function(state, unit, ap) {},
-                              function(state, unit, ap) {},
+                              function(state, skill) {},
                     ),
                    ]
                   ),
@@ -283,6 +291,7 @@ function create () {
         });
         
         // XXX: not sure if this is correct, not well documented yet
+        let parent = this;
         s.on("animationcomplete",
              function(anim, frame) {
                 if (anim.key == "casting") {
@@ -290,11 +299,14 @@ function create () {
                      * XXX: would be nice to pass the skill with the event
                      * but seems like globals are the only way
                      */
-                    let skill = sceneState.selected_skill;
-                    console.log("boop finished casting animation for",
-                                skill.display_name);
-                    skill.selectSkill(sceneState.selected_unit, false);
-                    
+                    let skill = parent.scene_state.selected_skill;
+                                
+                    /*
+                     * not the clearest, but selectSkill should happen last
+                     * since it causes a ui_state transition
+                     */
+                    skill.finishCasting(parent.scene_state, skill);
+                    skill.selectSkill(parent.scene_state.selected_unit, false);
                 }
              },
         );
@@ -469,8 +481,8 @@ function handleUnitClicks(state, unit, ap) {
     
     if (state.ui_state === SceneState.prototype.UI_STATE_TARGET_SKILL) {
         if (ap.leftButtonDown() != 0) {
-            state.transition(SceneState.prototype.UI_STATE_CASTING);
             unit.sprite.anims.play('casting');
+            state.transition(SceneState.prototype.UI_STATE_CASTING, ap.position);
         }
     }
     
