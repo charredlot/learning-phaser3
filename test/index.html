@@ -93,7 +93,13 @@ PlayerUnit.prototype.setMoveTarget = function (pos) {
                  this.move_target.y);
 }
 
-function Skill(display_name, preload, create, selected, deselected, updateCursor) {
+function Skill(display_name,
+               preload,
+               create,
+               selected,
+               deselected,
+               updateCursor,
+               cast) {
     /* html IDs can't have spaces */
     this.name = display_name.replace(/\s/g, '');
     this.display_name = display_name;
@@ -103,6 +109,7 @@ function Skill(display_name, preload, create, selected, deselected, updateCursor
     this.selected = selected;
     this.deselected = deselected;
     this.updateCursor = updateCursor;
+    this.cast = cast;
 }
 Skill.prototype.dom_id = function(unit) {
     return "skill_" + unit.name + "_" + this.name;
@@ -122,11 +129,17 @@ let units = [
                               function(scene) {
                                  /* TODO: clean up */
                                  scene.load.image('entangle_target', 'assets/entangle_target_green.png');
+                                 scene.load.image('entangle_effect', 'assets/entangle_effect.png');
                               },
                               function(scene) {
                                  let target = scene.add.sprite(0, 0, 'entangle_target');
+                                 let effect = scene.add.sprite(0, 0, 'entangle_effect');
+                                 
                                  target.visible = false;
+                                 effect.visible = false;
+                                 
                                  this.cursor_target = target;
+                                 this.effect = effect;
                               },
                               function(unit) {
                                  this.cursor_target.visible = true;
@@ -137,20 +150,27 @@ let units = [
                               function(state, unit, ap) {
                                  this.cursor_target.x = ap.position.x;
                                  this.cursor_target.y = ap.position.y;
-                              }
+                              },
+                              function(state, unit, ap) {
+                              
+                              },
                     ),
                     new Skill("Vine Pull",
                               function(scene) {},
                               function(scene) {},
                               function(unit) {},
                               function(unit) {},
-                              function(state, unit, ap) {}),
+                              function(state, unit, ap) {},
+                              function(state, unit, ap) {},
+                    ),
                     new Skill("Leaf Burst",
                               function(scene) {},
                               function(scene) {},
                               function(unit) {},
                               function(unit) {},
-                              function(state, unit, ap) {}),
+                              function(state, unit, ap) {},
+                              function(state, unit, ap) {},
+                    ),
                    ]
                   ),
 ]
@@ -165,12 +185,12 @@ function preload () {
     this.load.image('ground', 'assets/platform.png');
     this.load.image('star', 'assets/star.png');
     this.load.image(UNIT_SELECTED_IMG, 'assets/pink_cursor.png');
-    this.load.image('green_square96', 'assets/green_square96.png');
     
     let len = units.length;
     for (let i = 0; i < len; i++) {
         let unit = units[i];
-        this.load.image(unit.name, unit.char_asset_path);
+        this.load.spritesheet(unit.name, unit.char_asset_path,
+                              {frameWidth: 64, frameHeight: 64});
         this.load.image(unit.move_target_img(), unit.move_target_path);
         
         for (let j in unit.skills) {
