@@ -62,6 +62,32 @@ SceneState.prototype.UI_STATE_UNSELECTED = 0;
 SceneState.prototype.UI_STATE_SELECTED = 1;
 SceneState.prototype.UI_STATE_TARGET_SKILL = 2;
 SceneState.prototype.UI_STATE_CASTING = 3;
+SceneState.prototype.transition = function(new_state, ctx) {
+    switch (new_state) {
+        case SceneState.prototype.UI_STATE_UNSELECTED:
+            break;
+        case SceneState.prototype.UI_STATE_SELECTED:
+            if ((this.ui_state === SceneState.prototype.UI_STATE_UNSELECTED) ||
+                (this.ui_state === SceneState.prototype.UI_STATE_SELECTED)) {
+                this.selected_unit = ctx;
+            }
+            this.selected_skill = null;
+            break;
+        case SceneState.prototype.UI_STATE_TARGET_SKILL:
+            this.selected_skill = ctx;
+            break;
+        case SceneState.prototype.UI_STATE_CASTING:
+            break;
+        default:
+            console.log("ERROR: bad state", new_state);
+            break;
+    }
+    console.log("ui_state transitioning from",
+                this.ui_state,
+                "to",
+                new_state);
+    this.ui_state = new_state;
+}
 
 function PlayerUnit(display_name,
                     char_asset_path,
@@ -96,8 +122,7 @@ PlayerUnit.prototype.setMoveTarget = function (pos) {
 function Skill(display_name,
                preload,
                create,
-               selected,
-               deselected,
+               select,
                updateCursor,
                cast) {
     /* html IDs can't have spaces */
@@ -106,18 +131,30 @@ function Skill(display_name,
     
     this.preload = preload;
     this.create = create;
-    this.selected = selected;
-    this.deselected = deselected;
+    this._select = select;
     this.updateCursor = updateCursor;
     this.cast = cast;
 }
 Skill.prototype.dom_id = function(unit) {
     return "skill_" + unit.name + "_" + this.name;
 }
-Skill.prototype.selectedUpdateUI = function(unit) {
-    $('.skillsui').removeClass('skillselected');
-    $('#' + this.dom_id(unit)).addClass('skillselected');
-    console.log("clicked " + this.name);
+Skill.prototype.selectSkill = function(unit, select) {
+    if (select) {
+        $('.skillsui').removeClass('skillselected');
+        $('#' + this.dom_id(unit)).addClass('skillselected');
+    }
+    else {
+        $('#' + this.dom_id(unit)).removeClass('skillselected');
+    }
+    this._select(unit, select);
+    
+    /* XXX: pass sceneState instead of accessing global later */
+    if (select) {
+        sceneState.transition(SceneState.prototype.UI_STATE_TARGET_SKILL, this);
+    }
+    else {
+        sceneState.transition(SceneState.prototype.UI_STATE_SELECTED);
+    }
 }
 
 let units = [
@@ -141,11 +178,8 @@ let units = [
                                  this.cursor_target = target;
                                  this.effect = effect;
                               },
-                              function(unit) {
-                                 this.cursor_target.visible = true;
-                              },
-                              function(unit) {
-                                 this.cursor_target.visible = false;
+                              function(unit, select) {
+                                 this.cursor_target.visible = select;
                               },
                               function(state, unit, ap) {
                                  this.cursor_target.x = ap.position.x;
@@ -158,16 +192,14 @@ let units = [
                     new Skill("Vine Pull",
                               function(scene) {},
                               function(scene) {},
-                              function(unit) {},
-                              function(unit) {},
+                              function(unit, select) {},
                               function(state, unit, ap) {},
                               function(state, unit, ap) {},
                     ),
                     new Skill("Leaf Burst",
                               function(scene) {},
                               function(scene) {},
-                              function(unit) {},
-                              function(unit) {},
+                              function(unit, select) {},
                               function(state, unit, ap) {},
                               function(state, unit, ap) {},
                     ),
@@ -221,7 +253,7 @@ function create () {
         container.y = ((i + 1) * s.displayHeight) + (s.displayHeight / 2);
                 
         s.setInteractive();
-        s.player_unit = units[i];
+        s.player_unit = units[i];        
         
         cursor.visible = false;
         move_target.visible = false;
@@ -234,6 +266,39 @@ function create () {
         for (let j in unit.skills) {
             unit.skills[j].create(this);
         }
+        
+        // XXX: maybe make this more flexible
+        this.anims.create({
+            key: "casting",
+            frames: [
+                {key: unit.name, frame: 4},
+                {key: unit.name, frame: 5},
+                {key: unit.name, frame: 6},
+                {key: unit.name, frame: 5},
+                {key: unit.name, frame: 6},
+                {key: unit.name, frame: 7},
+                {key: unit.name, frame: 0},
+            ],
+            frameRate: 3,
+        });
+        
+        // XXX: not sure if this is correct, not well documented yet
+        s.on("animationcomplete",
+             function(anim, frame) {
+                if (anim.key == "casting") {
+                    /*
+                     * XXX: would be nice to pass the skill with the event
+                     * but seems like globals are the only way
+                     */
+                    let skill = sceneState.selected_skill;
+                    console.log("boop finished casting animation for",
+                                skill.display_name);
+                    skill.selectSkill(sceneState.selected_unit, false);
+                    
+                }
+             },
+        );
+        
         
         this.scene_state.units.push(unit);
     }
@@ -258,6 +323,7 @@ function create () {
     debugScene = this;
 }
 
+/* TODO: move this DOM stuff to create time */
 function setSkills(unit) {
     let skill_list_id = "skilllist_" + unit.name;
     let skill_list_dom = document.getElementById(skill_list_id);
@@ -282,7 +348,11 @@ function setSkills(unit) {
             skill_obj.attr('value', skill.display_name);
             skill_obj.css('display', 'inline');
             skill_obj.css('visibility', 'visible');
-            skill_obj.click(function() { skill.selected(unit); });
+            /* XXX: this is a bit janky, fix later */
+            skill_obj.click(function() {
+                let is_selected = sceneState.selected_skill === skill;
+                skill.selectSkill(unit, !is_selected);
+            });
             
             skill_list.append(skill_obj);
         }
@@ -304,8 +374,7 @@ function objectClicked(ptr, obj) {
     if (state.selected_unit !== obj.player_unit) {
         let unit = obj.player_unit;
         
-        state.ui_state = SceneState.prototype.UI_STATE_SELECTED;
-        state.selected_unit = unit;
+        state.transition(SceneState.prototype.UI_STATE_SELECTED, unit);
         
         unit.cursor.visible = true;
         
@@ -334,6 +403,11 @@ function clamp_movement(orig_v, dv, target_v) {
 }
 
 function steer_units(state) {
+    if (state.ui_state === SceneState.prototype.UI_STATE_CASTING) {
+        // halt movement while casting
+        return;
+    }
+    
     let len = state.units.length;
     for (let i = 0; i < len; i++) {
         let unit = state.units[i];
@@ -393,6 +467,13 @@ function handleUnitClicks(state, unit, ap) {
         return;
     }
     
+    if (state.ui_state === SceneState.prototype.UI_STATE_TARGET_SKILL) {
+        if (ap.leftButtonDown() != 0) {
+            state.transition(SceneState.prototype.UI_STATE_CASTING);
+            unit.sprite.anims.play('casting');
+        }
+    }
+    
     if (ap.rightButtonDown() != 0) {
         unit.setMoveTarget(ap.position);
     }
@@ -426,20 +507,11 @@ function checkUnitKeys(state, unit) {
             /* deselect skill */
             let skill = state.selected_skill;
             
-            state.ui_state = SceneState.prototype.UI_STATE_SELECTED;
-            state.selected_skill = null;
-            
-            $('#' + skill.dom_id(unit)).removeClass('skillselected');
-            skill.deselected(unit);
+            skill.selectSkill(unit, false);
         }
         else {
             let skill = unit.skills[i];
-            
-            skill.selectedUpdateUI(unit);
-            skill.selected(unit);
-            
-            state.ui_state = SceneState.prototype.UI_STATE_TARGET_SKILL;
-            state.selected_skill = skill;
+            skill.selectSkill(unit, true);
         }
         break;
     }
