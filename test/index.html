@@ -58,7 +58,6 @@ function SceneState() {
     this.units = [];
     this.selected_unit = null;
     this.selected_skill = null;
-    this.cast_position = null;
     this.ui_state = SceneState.prototype.UI_STATE_UNSELECTED;
     this.skill_keys = {};
 }
@@ -80,15 +79,11 @@ SceneState.prototype.transition = function(new_state, ctx) {
                 $('.skillsui').removeClass('skillcasting');
             }
             this.selected_skill = null;
-            this.cast_position = null;
             break;
         case SceneState.prototype.UI_STATE_TARGET_SKILL:
             this.selected_skill = ctx;
-            this.cast_position = null;
             break;
         case SceneState.prototype.UI_STATE_CASTING:
-            /* TODO: will want unit targeted spells too */
-            this.cast_position = ctx;
             break;
         default:
             console.log("ERROR: bad state", new_state);
@@ -242,11 +237,18 @@ let units = [
                                  this.cursor_target.x = ap.position.x;
                                  this.cursor_target.y = ap.position.y;
                               },
-                              function(state, skill) {
-                                 console.log("finishCasting",
-                                             skill.display_name,
-                                             "at",
-                                             state.cast_position);
+                              function(state) {
+                                 this.effect.x = this.cursor_target.x;
+                                 this.effect.y = this.cursor_target.y;
+                                 
+                                 this.effect.visible = true;
+                                 state.scene.time.addEvent({
+                                     delay: 3000,
+                                     callback: function () {
+                                         this.effect.visible = false;
+                                     },
+                                     callbackScope: this,
+                                 });
                               },
                     ),
                     new Skill("Vine Pull",
@@ -254,14 +256,14 @@ let units = [
                               function(scene) {},
                               function(unit, select) {},
                               function(state, unit, ap) {},
-                              function(state, skill) {},
+                              function(state) {},
                     ),
                     new Skill("Leaf Burst",
                               function(scene) {},
                               function(scene) {},
                               function(unit, select) {},
                               function(state, unit, ap) {},
-                              function(state, skill) {},
+                              function(state) {},
                     ),
                    ]
                   ),
@@ -293,6 +295,7 @@ function preload () {
 
 function create () {
     this.scene_state = sceneState;
+    this.scene_state.scene = this;
     
     this.add.image(halfWidth, halfHeight, 'sky');
 
@@ -357,7 +360,7 @@ function create () {
                      * not the clearest, but selectSkill should happen last
                      * since it causes a ui_state transition
                      */
-                    skill.finishCasting(parent.scene_state, skill);
+                    skill.finishCasting(parent.scene_state);
                     skill.selectSkill(parent.scene_state.selected_unit, false);
                 }
              },
@@ -494,11 +497,14 @@ function handleUnitClicks(state, unit, ap) {
             skill_obj.removeClass('skillselected');
             skill_obj.addClass('skillcasting');
             unit.sprite.anims.play('casting');
-            state.transition(SceneState.prototype.UI_STATE_CASTING, ap.position);
+            state.transition(SceneState.prototype.UI_STATE_CASTING);
         }
     }
     
     if (ap.rightButtonDown() != 0) {
+        if (!unit) {
+            console.log(state);
+        }
         unit.setMoveTarget(ap.position);
     }
 }
@@ -516,6 +522,10 @@ function updateUnitCursor(state, unit, ap) {
 }
 
 function checkUnitKeys(state, unit) {
+    if (state.unit_state === SceneState.prototype.UI_STATE_CASTING) {
+        return;
+    }
+    
     for (let code in state.skill_keys) {
         let key = state.skill_keys[code];
         if (!Phaser.Input.Keyboard.JustDown(key)) {
