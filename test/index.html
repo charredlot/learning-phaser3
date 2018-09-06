@@ -56,6 +56,7 @@ let UNIT_SELECTED_IMG = "pink_cursor";
 
 function SceneState() {
     this.units = [];
+    this.enemies = [];
     this.selected_unit = null;
     this.selected_skill = null;
     this.ui_state = SceneState.prototype.UI_STATE_UNSELECTED;
@@ -279,7 +280,9 @@ function preload () {
     this.load.image('ground', 'assets/platform.png');
     this.load.image('star', 'assets/star.png');
     this.load.image(UNIT_SELECTED_IMG, 'assets/pink_cursor.png');
-    
+    this.load.spritesheet('weirdcloud', 'assets/weird_cloud.png',
+                          {frameWidth: 64, frameHeight: 64});
+
     let len = units.length;
     for (let i = 0; i < len; i++) {
         let unit = units[i];
@@ -298,7 +301,25 @@ function create () {
     this.scene_state.scene = this;
     
     this.add.image(halfWidth, halfHeight, 'sky');
-
+   
+    for (let i = 0; i < 3; i++) {
+        let enemy = this.add.sprite(200, 100 * (i + 1), 'weirdcloud');
+        /* eh kind of wasteful, but annoying when the animations sync up */
+        this.anims.create({
+            key: "pulsating" + i,
+            frames: [
+                {key: 'weirdcloud', frame: i % 4},
+                {key: 'weirdcloud', frame: (i + 1) % 4},
+                {key: 'weirdcloud', frame: (i + 2) % 4},
+                {key: 'weirdcloud', frame: (i + 3) % 4},
+            ],
+            frameRate: 12,
+            repeat: -1,
+        });
+        enemy.anims.play("pulsating" + i);
+        this.scene_state.enemies.push(enemy);
+    }
+    
     let len = units.length;
     for (let i = 0; i < len; i++) {
         let unit = units[i];
