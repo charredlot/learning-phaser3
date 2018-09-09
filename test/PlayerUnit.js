@@ -21,7 +21,7 @@ PlayerUnit.prototype.move_target_img = function () {
 PlayerUnit.prototype.setMoveTarget = function (pos) {
     this.move_target.x = Math.round(pos.x);
     this.move_target.y = Math.round(pos.y);
-    this.move_target.visible = true;
+    this.move_target.setVisible(true);
     this.has_move_target = true;
 }
 PlayerUnit.prototype.initSkillsUI = function(state) {

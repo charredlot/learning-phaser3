@@ -157,8 +157,8 @@ function create () {
         s.setCollideWorldBounds(true);
         s.__player_unit = unit;
         
-        cursor.visible = false;
-        move_target.visible = false;
+        cursor.setVisible(false);
+        move_target.setVisible(false);
                 
         unit.container = container;
         unit.sprite = s;
@@ -241,7 +241,7 @@ function objectClicked(ptr, sprite) {
     if (state.selected_unit !== unit) {
         state.transition(SceneState.prototype.UI_STATE_SELECTED, unit);
         
-        unit.cursor.visible = true;
+        unit.cursor.setVisible(true);
         
         unit.showSkillsUI();
     }
@@ -336,7 +336,7 @@ function steerUnits(state) {
         unit.container.body.setVelocity(v.dx, v.dy);
         if ((v.dx === 0) && (v.dy === 0)) {
             unit.has_move_target = false;
-            unit.move_target.visible = false;
+            unit.move_target.setVisible(false);
         }
     }
 }

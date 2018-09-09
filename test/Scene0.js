@@ -28,7 +28,7 @@ function _initEnemies() {
                     sprite.x = sprite.displayWidth / 2;
                     sprite.y = sprite.displayHeight / 2;
                     
-                    ball.visible = false;
+                    ball.setVisible(false);
                     
                     /*
                      * eh kind of wasteful, but annoying when the animations
@@ -106,14 +106,14 @@ function getSceneSetup() {
                         let target = scene.add.sprite(0, 0, 'entangle_target');
                         let effect = scene.add.sprite(0, 0, 'entangle_effect');
                      
-                        target.visible = false;
-                        effect.visible = false;
+                        target.setVisible(false);
+                        effect.setVisible(false);
                      
                         this.cursor_target = target;
                         this.effect = effect;
                     },
                     select: function(unit, select) {
-                        this.cursor_target.visible = select;
+                        this.cursor_target.setVisible(select);
                     },
                     updateCursor: function(state, unit, ap) {
                         this.cursor_target.x = ap.position.x;
@@ -122,12 +122,12 @@ function getSceneSetup() {
                     finishCasting: function(state) {
                         this.effect.x = this.cursor_target.x;
                         this.effect.y = this.cursor_target.y;
-                        this.effect.visible = true;
+                        this.effect.setVisible(true);
                         
                         state.scene.time.addEvent({
                             delay: 3000,
                             callback: function () {
-                                this.effect.visible = false;
+                                this.effect.setVisible(false);
                             },
                             callbackScope: this,
                         });
