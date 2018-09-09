@@ -177,6 +177,8 @@ function create () {
          * want to set mass to infinity
          */
         enemy.body.moves = false;
+        enemy.setCollideWorldBounds(true);
+        
         this.scene_state.enemies.add(enemy);
     }
     
@@ -222,7 +224,8 @@ function create () {
         container.__player_unit = units[i];
         
         s.body.moves = false;
-        s.setInteractive();        
+        s.setInteractive();
+        s.setCollideWorldBounds(true);
         s.__player_unit = units[i];        
         
         cursor.visible = false;
@@ -343,7 +346,7 @@ function clamp_velocity(orig_v, dv, target_v, size) {
     return dv;
 }
 
-function steer_units(state) {
+function steerUnits(state) {
     /* maybe want to do children.iterate */
     for (let i in state.units.children.entries) {
         let unit = state.units.children.entries[i].__player_unit;
@@ -389,6 +392,11 @@ function steer_units(state) {
                            move_dy,
                            dst_y,
                            unit.sprite.displayHeight));
+    }
+}
+
+function steerEnemies(state) {
+    for (let i in state.enemies.children.entries) {
     }
 }
 
@@ -502,7 +510,8 @@ function update () {
         updateUnitCursor(state, unit, ap);
     }
     
-    steer_units(state);
+    steerUnits(state);
+    steerEnemies(state);
 }
 </script>
 <div id="skills" style="visibility: collapse;">
