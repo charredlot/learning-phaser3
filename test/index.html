@@ -307,8 +307,7 @@ function create () {
     
     this.add.image(halfWidth, halfHeight, 'sky');
    
-   /* we don't want the physics engine to move enemies */
-    this.scene_state.enemies = this.physics.add.group({immovable: true});
+    this.scene_state.enemies = this.physics.add.group();
     for (let i = 0; i < 3; i++) {
         let enemy = this.physics.add.sprite(200, 100 * (i + 1), 'weirdcloud');
         /* eh kind of wasteful, but annoying when the animations sync up */
@@ -324,11 +323,19 @@ function create () {
             repeat: -1,
         });
         enemy.anims.play("pulsating" + i);
+        /*
+         * immovable in physics.add.group makes physics interactions fail
+         * completely, this seems to do what we want. alternatively may
+         * want to set mass to infinity
+         */
+        enemy.body.moves = false;
         this.scene_state.enemies.add(enemy);
     }
     
-    /* we don't want the physics engine to move units */
-    this.scene_state.units = this.physics.add.group({immovable: true});
+    /* see above comment about collisions and immovable */
+    this.scene_state.units = this.physics.add.group({bounceX: -1,
+                                                     bounceY: -1});
+
     for (let i in units) {
         let unit = units[i];
         
@@ -356,7 +363,7 @@ function create () {
          * maybe related to the sprite body relative velocity being 0?
          * it's unclear
          */
-        this.physics.world.enable(container);
+        this.physics.world.enable([container, s]);
         
         /*
          * set the body size for collisions based on the sprite
@@ -364,8 +371,10 @@ function create () {
          */
         let boundingBox = s.getBounds();
         container.body.setSize(boundingBox.width, boundingBox.height);
+        container.__player_unit = units[i];
         
-        s.setInteractive();
+        s.body.moves = false;
+        s.setInteractive();        
         s.__player_unit = units[i];        
         
         cursor.visible = false;
@@ -418,12 +427,11 @@ function create () {
         
         unit.initSkillsUI(this.scene_state);
         
-        this.scene_state.units.add(unit.sprite);
-        
-        this.physics.add.collider(unit.container,
-                                  this.scene_state.enemies);
+        this.scene_state.units.add(unit.container);
     }
 
+    this.physics.add.collider(this.scene_state.units,
+                              this.scene_state.enemies);
     /* enemies should collide with themselves */
     this.physics.add.collider(this.scene_state.enemies,
                               this.scene_state.enemies);
@@ -488,7 +496,7 @@ function clamp_velocity(orig_v, dv, target_v, size) {
 }
 
 function steer_units(state) {
-    let len = state.units.length;
+    /* maybe want to do children.iterate */
     for (let i in state.units.children.entries) {
         let unit = state.units.children.entries[i].__player_unit;
         
