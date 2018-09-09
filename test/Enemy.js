@@ -3,19 +3,28 @@
 function Enemy({displayName,
                 assetPath,
                 assetFrame,
-                create}) {
+                create,
+                moveSpeed}) {
     this.displayName = displayName;
     this.assetPath = assetPath;
     this.assetFrame = assetFrame;
     this.create = create;
     
-    this.moveTarget = null;
+    this.moveTarget = {x: 0, y: 0};
+    this.state = Enemy.prototype.STATE_IDLE;
     
     this.container = null;
     this.sprite = null;
+    this.moveSpeed = moveSpeed;
 }
+Enemy.prototype.STATE_IDLE = 0;
+Enemy.prototype.STATE_MOVING = 1;
+Enemy.prototype.STATE_CASTING = 2;
 Enemy.prototype.createCommon = function(scene, container, sprite) {
     scene.physics.world.enable([container, sprite]);
+    
+    let boundingBox = sprite.getBounds();
+    container.body.setSize(boundingBox.width, boundingBox.height);
     
     /*
      * immovable in physics.add.group makes physics

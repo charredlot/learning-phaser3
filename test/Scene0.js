@@ -38,6 +38,7 @@ function getSceneSetup() {
                     
                     this.createCommon(scene, container, sprite);
                 },
+                moveSpeed: 30,
         });
         enemies.push(newEnemy);
     }

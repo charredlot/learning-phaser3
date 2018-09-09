@@ -118,7 +118,7 @@ function create () {
         
         enemy.create(this);
         
-        this.scene_state.enemies.add(enemy.sprite);
+        this.scene_state.enemies.add(enemy.container);
     }
     
     /* see above comment about collisions and immovable */
@@ -354,6 +354,32 @@ function steerUnits(state) {
 function steerEnemies(state) {
     for (let i in state.enemies.children.entries) {
         let enemy = state.enemies.children.entries[i].__enemy;
+        
+        switch (enemy.state) {
+            case Enemy.prototype.STATE_IDLE:
+                /* pick a random move target */
+                let bounds = state.scene.physics.world.bounds;
+                enemy.moveTarget.x = Math.random() * bounds.width;
+                enemy.moveTarget.y = Math.random() * bounds.height;
+                enemy.state = Enemy.prototype.STATE_MOVING;
+                break;
+            case Enemy.prototype.STATE_MOVING:
+                let src_x = enemy.container.body.center.x;
+                let src_y = enemy.container.body.center.y;
+                let v = calculateVelocity(src_x, src_y,
+                                          enemy.moveTarget.x,
+                                          enemy.moveTarget.y,
+                                          enemy.moveSpeed,
+                                          enemy.sprite.displayWidth,
+                                          enemy.sprite.displayHeight);
+                enemy.container.body.setVelocity(v.dx, v.dy);
+                if ((v.dx === 0) && (v.dy === 0)) {
+                    enemy.state = Enemy.prototype.STATE_IDLE;
+                }
+                break;
+            case Enemy.prototype.STATE_CASTING:
+                break;
+        }
     }
 }
 
