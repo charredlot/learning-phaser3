@@ -5,6 +5,9 @@
     <title>test</title>
     <script src="/phaser.js"></script>
     <script src="/jquery-3.3.1.js"></script>
+    
+    <script src="/SceneState.js"></script>
+    <script src="/PlayerUnit.js"></script>
     <style type="text/css">
         body {
             margin: 0;
@@ -59,120 +62,6 @@ var config = {
 let imgScale = window.devicePixelRatio / 3;
 let unitSize = 128;
 let UNIT_SELECTED_IMG = "pink_cursor";
-
-function SceneState() {
-    this.units = null;
-    this.enemies = null;
-    this.selected_unit = null;
-    this.selected_skill = null;
-    this.ui_state = SceneState.prototype.UI_STATE_UNSELECTED;
-    this.skill_keys = {};
-}
-SceneState.prototype.UI_STATE_UNSELECTED = 0;
-SceneState.prototype.UI_STATE_SELECTED = 1;
-SceneState.prototype.UI_STATE_TARGET_SKILL = 2;
-SceneState.prototype.UI_STATE_CASTING = 3;
-SceneState.prototype.transition = function(new_state, ctx) {
-    switch (new_state) {
-        case SceneState.prototype.UI_STATE_UNSELECTED:
-            break;
-        case SceneState.prototype.UI_STATE_SELECTED:
-            if ((this.ui_state === SceneState.prototype.UI_STATE_UNSELECTED) ||
-                (this.ui_state === SceneState.prototype.UI_STATE_SELECTED)) {
-                $('.skillsui').removeClass('skillselected');
-                this.selected_unit = ctx;
-            }
-            else if (this.ui_state === SceneState.prototype.UI_STATE_CASTING) {
-                $('.skillsui').removeClass('skillcasting');
-            }
-            this.selected_skill = null;
-            break;
-        case SceneState.prototype.UI_STATE_TARGET_SKILL:
-            this.selected_skill = ctx;
-            break;
-        case SceneState.prototype.UI_STATE_CASTING:
-            break;
-        default:
-            console.log("ERROR: bad state", new_state);
-            break;
-    }
-    console.log("ui_state transitioning from",
-                this.ui_state,
-                "to",
-                new_state);
-    this.ui_state = new_state;
-}
-
-function PlayerUnit(display_name,
-                    char_asset_path,
-                    move_target_path,
-                    skills) {
-    /* html IDs can't have spaces */
-    this.name = display_name.replace(/\s/g, '');
-    this.display_name = display_name;
-    this.char_asset_path = char_asset_path;
-    this.move_target_path = move_target_path;
-    this.container = null;
-    this.sprite = null;
-    this.cursor = null;
-    this.move_target = null;
-    this.has_move_target = false;
-    this.move_speed = 50;
-    this.skills = skills;
-}
-PlayerUnit.prototype.move_target_img = function () {
-    return this.name + "_movetarget";
-}
-PlayerUnit.prototype.setMoveTarget = function (pos) {
-    this.move_target.x = Math.round(pos.x);
-    this.move_target.y = Math.round(pos.y);
-    this.move_target.visible = true;
-    this.has_move_target = true;
-    
-    console.log("move to " + this.move_target.x + "," +
-                 this.move_target.y);
-}
-PlayerUnit.prototype.initSkillsUI = function(state) {
-    let skill_list_id = "skilllist_" + this.name;
-    let skill_list = $('#skilllisttemplate').clone();
-    
-    skill_list.attr('id', skill_list_id);
-    skill_list.css('display', 'none');
-    skill_list.empty();
-        
-    for (let i in this.skills) {
-        let skill = this.skills[i];
-        let skill_id = skill.dom_id(this);
-        let skill_obj = $('#skilltemplate').clone();
-        
-        skill_obj.attr('id', skill_id);
-        skill_obj.attr('value', skill.display_name);
-        skill_obj.css('display', 'inline');
-        skill_obj.css('visibility', 'visible');
-        
-        /* XXX: this is a bit janky, fix later */
-        skill_obj.click(function() {
-            let is_selected = (state.selected_skill === skill);
-            skill.selectSkill(this, !is_selected);
-        });
-        
-        skill_list.append(skill_obj);
-    }
-        
-    $('#skills').append(skill_list);
-}
-PlayerUnit.prototype.showSkillsUI = function() {
-    /* TODO: hide the old skill list (by class?) or remove children */
-    let skill_list_id = "skilllist_" + this.name;
-    
-    $('#' + skill_list_id).css('display', 'block');
-    $('#' + skill_list_id).css('visibility', 'visible');
-    
-    /* TODO: do this stuff exactly once */    
-    $('#skilltemplate').css('display', 'none');
-    $('#skilllisttemplate').css('display', 'none');
-    $('#skills').css('visibility', 'visible');    
-}
 
 function Skill(display_name,
                preload,
