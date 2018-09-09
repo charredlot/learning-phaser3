@@ -1,4 +1,47 @@
 function getSceneSetup() {
+    let enemies = [];
+    
+    for (let i = 0; i < 3; i++) {
+        let newEnemy = new Enemy({
+                displayName: 'weirdcloud' + i,
+                assetPath: 'assets/weird_cloud.png',
+                assetFrame: {frameWidth: 64, frameHeight: 64},
+                create: function(scene) {
+                    let sprite = scene.physics.add.sprite(0,
+                                                          0,
+                                                          this.assetPath);
+                    let container = scene.add.container(200,
+                                                        100 * (i + 1),
+                                                        [sprite]);
+                    
+                    /* sprite origin is center, container is top left*/
+                    sprite.x = sprite.displayWidth / 2;
+                    sprite.y = sprite.displayHeight / 2;
+                    
+                    /*
+                     * eh kind of wasteful, but annoying when the animations
+                     * sync up
+                     */
+                    scene.anims.create({
+                        key: "pulsating" + i,
+                        frames: [
+                            {key: this.assetPath, frame: i % 4},
+                            {key: this.assetPath, frame: (i + 1) % 4},
+                            {key: this.assetPath, frame: (i + 2) % 4},
+                            {key: this.assetPath, frame: (i + 3) % 4},
+                        ],
+                        frameRate: 12,
+                        repeat: -1,
+                    });
+            
+                    sprite.anims.play("pulsating" + i);
+                    
+                    this.createCommon(scene, container, sprite);
+                },
+        });
+        enemies.push(newEnemy);
+    }
+    
     return new SceneSetup({
     units: [
         new PlayerUnit(
@@ -65,5 +108,7 @@ function getSceneSetup() {
             ]
         ),
     ],
+    
+    enemies: enemies,
     });
 }

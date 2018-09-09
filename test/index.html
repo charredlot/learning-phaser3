@@ -9,6 +9,7 @@
     <script src="/SceneState.js"></script>
     <script src="/PlayerUnit.js"></script>
     <script src="/Skill.js"></script>
+    <script src="/Enemy.js"></script>
     <script src="/SceneSetup.js"></script>
     <script src="/Scene0.js"></script>
     <style type="text/css">
@@ -77,8 +78,6 @@ function preload () {
     this.load.image('ground', 'assets/platform.png');
     this.load.image('star', 'assets/star.png');
     this.load.image(UNIT_SELECTED_IMG, 'assets/pink_cursor.png');
-    this.load.spritesheet('weirdcloud', 'assets/weird_cloud.png',
-                          {frameWidth: 64, frameHeight: 64});
 
     for (let i in sceneSetup.units) {
         let unit = sceneSetup.units[i];
@@ -90,6 +89,21 @@ function preload () {
             unit.skills[j].preload(this);
         }
     }
+    
+    let assets = {};
+    for (let i in sceneSetup.enemies) {
+        let enemy = sceneSetup.enemies[i];
+        
+        if (assets[enemy.assetPath] === true) {
+            continue;
+        }
+        
+        this.load.spritesheet(enemy.assetPath,
+                              enemy.assetPath,
+                              enemy.assetFrame);
+        
+        assets[enemy.assetPath] = true;
+    }
 }
 
 function create () {
@@ -99,30 +113,12 @@ function create () {
     this.add.image(halfWidth, halfHeight, 'sky');
    
     this.scene_state.enemies = this.physics.add.group();
-    for (let i = 0; i < 3; i++) {
-        let enemy = this.physics.add.sprite(200, 100 * (i + 1), 'weirdcloud');
-        /* eh kind of wasteful, but annoying when the animations sync up */
-        this.anims.create({
-            key: "pulsating" + i,
-            frames: [
-                {key: 'weirdcloud', frame: i % 4},
-                {key: 'weirdcloud', frame: (i + 1) % 4},
-                {key: 'weirdcloud', frame: (i + 2) % 4},
-                {key: 'weirdcloud', frame: (i + 3) % 4},
-            ],
-            frameRate: 12,
-            repeat: -1,
-        });
-        enemy.anims.play("pulsating" + i);
-        /*
-         * immovable in physics.add.group makes physics interactions fail
-         * completely, this seems to do what we want. alternatively may
-         * want to set mass to infinity
-         */
-        enemy.body.moves = false;
-        enemy.setCollideWorldBounds(true);
+    for (let i in sceneSetup.enemies) {
+        let enemy = sceneSetup.enemies[i];
         
-        this.scene_state.enemies.add(enemy);
+        enemy.create(this);
+        
+        this.scene_state.enemies.add(enemy.sprite);
     }
     
     /* see above comment about collisions and immovable */
@@ -340,6 +336,7 @@ function steerUnits(state) {
 
 function steerEnemies(state) {
     for (let i in state.enemies.children.entries) {
+        let enemy = state.enemies.children.entries[i].__enemy;
     }
 }
 

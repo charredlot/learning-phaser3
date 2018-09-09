@@ -1,5 +1,6 @@
 'use strict';
 
-function SceneSetup({units}) {
+function SceneSetup({units, enemies}) {
     this.units = units;
+    this.enemies = enemies;
 }
