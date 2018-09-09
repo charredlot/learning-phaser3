@@ -285,6 +285,34 @@ function clamp_velocity(orig_v, dv, target_v, size) {
     return dv;
 }
 
+function calculateVelocity(src_x, src_y,
+                           dst_x, dst_y,
+                           speed,
+                           width, height) {
+    let dx = dst_x - src_x;
+    let dy = dst_y - src_y;
+    let dist = Math.sqrt((dx * dx) + (dy * dy));
+    
+    if (dist < Number.EPSILON) {
+        return {dx: 0, dy: 0};
+    }
+    
+    let move_dx = (dx * speed) / dist;
+    let move_dy = (dy * speed) / dist;
+    
+    /* need some logic to not overshoot */
+    return {
+        dx: clamp_velocity(src_x,
+                           move_dx,
+                           dst_x,
+                           width),
+        dy: clamp_velocity(src_y,
+                           move_dy,
+                           dst_y,
+                           height),
+    };
+}
+
 function steerUnits(state) {
     /* maybe want to do children.iterate */
     for (let i in state.units.children.entries) {
@@ -308,29 +336,18 @@ function steerUnits(state) {
         let src_y = unit.container.body.center.y;
         let dst_x = unit.move_target.x;
         let dst_y = unit.move_target.y;
-        let dx = dst_x - src_x;
-        let dy = dst_y - src_y;
-        let dist = Math.sqrt((dx * dx) + (dy * dy));
         
-        if (dist < Number.EPSILON) {
+        let v = calculateVelocity(src_x, src_y,
+                                  dst_x, dst_y,
+                                  unit.move_speed,
+                                  unit.sprite.displayWidth,
+                                  unit.sprite.displayHeight);
+        
+        unit.container.body.setVelocity(v.dx, v.dy);
+        if ((v.dx === 0) && (v.dy === 0)) {
             unit.has_move_target = false;
             unit.move_target.visible = false;
-            continue;
         }
-        
-        let move_dx = (dx * unit.move_speed) / dist;
-        let move_dy = (dy * unit.move_speed) / dist;
-        
-        /* need some logic to not overshoot */
-        unit.container.body.setVelocity(
-            clamp_velocity(src_x,
-                           move_dx,
-                           dst_x,
-                           unit.sprite.displayWidth),
-            clamp_velocity(src_y,
-                           move_dy,
-                           dst_y,
-                           unit.sprite.displayHeight));
     }
 }
 
