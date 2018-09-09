@@ -1,14 +1,14 @@
 'use strict';
 
 function Enemy({displayName,
-                assetPath,
-                assetFrame,
+                preload,
                 create,
+                attack,
                 moveSpeed}) {
     this.displayName = displayName;
-    this.assetPath = assetPath;
-    this.assetFrame = assetFrame;
+    this.preload = preload;
     this.create = create;
+    this.attack = attack;
     
     this.moveTarget = {x: 0, y: 0};
     this.state = Enemy.prototype.STATE_IDLE;

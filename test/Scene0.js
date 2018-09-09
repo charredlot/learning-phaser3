@@ -1,15 +1,25 @@
-function getSceneSetup() {
+function _initEnemies() {
     let enemies = [];
+    let cloud = 'assets/weird_cloud.png';
+    let projectile = 'assets/red_ball18.png';
+    let pulsatingPrefix = cloud + "pulsating";
+    let chargingPrefix = cloud + "charging";
+    
+    let preload = function(scene) {
+        scene.load.spritesheet(cloud, cloud,
+                               {frameWidth: 64, frameHeight: 64});
+        scene.load.image(projectile, projectile);
+    };
     
     for (let i = 0; i < 3; i++) {
         let newEnemy = new Enemy({
                 displayName: 'weirdcloud' + i,
-                assetPath: 'assets/weird_cloud.png',
-                assetFrame: {frameWidth: 64, frameHeight: 64},
+                preload: preload,
                 create: function(scene) {
+                    let ball = scene.add.sprite(0, 0, projectile);
                     let sprite = scene.physics.add.sprite(0,
                                                           0,
-                                                          this.assetPath);
+                                                          cloud);
                     let container = scene.add.container(200,
                                                         100 * (i + 1),
                                                         [sprite]);
@@ -18,31 +28,64 @@ function getSceneSetup() {
                     sprite.x = sprite.displayWidth / 2;
                     sprite.y = sprite.displayHeight / 2;
                     
+                    ball.visible = false;
+                    
                     /*
                      * eh kind of wasteful, but annoying when the animations
                      * sync up
                      */
                     scene.anims.create({
-                        key: "pulsating" + i,
+                        key: pulsatingPrefix + i,
                         frames: [
-                            {key: this.assetPath, frame: i % 4},
-                            {key: this.assetPath, frame: (i + 1) % 4},
-                            {key: this.assetPath, frame: (i + 2) % 4},
-                            {key: this.assetPath, frame: (i + 3) % 4},
+                            {key: cloud, frame: i % 4},
+                            {key: cloud, frame: (i + 1) % 4},
+                            {key: cloud, frame: (i + 2) % 4},
+                            {key: cloud, frame: (i + 3) % 4},
                         ],
                         frameRate: 12,
                         repeat: -1,
                     });
-            
-                    sprite.anims.play("pulsating" + i);
                     
+                    scene.anims.create({
+                        key: chargingPrefix + i,
+                        frames: [
+                            {key: cloud, frame: 1},
+                            {key: cloud, frame: 2},
+                            {key: cloud, frame: 1},
+                            {key: cloud, frame: 2},
+                        ],
+                        frameRate: 1,
+                    });
+            
+                    sprite.anims.play(pulsatingPrefix + i);
+                    
+                    let scope = this;
+                    sprite.on(
+                        "animationcomplete",
+                        function(anim, frame) {
+                            if (anim.key !== chargingPrefix + i) {
+                                return;
+                            }
+                            
+                            scope.state = Enemy.prototype.STATE_IDLE;
+                            sprite.anims.play(pulsatingPrefix + i);
+                        }
+                    );
                     this.createCommon(scene, container, sprite);
+                },
+                attack: function(scene) {
+                    this.container.body.setVelocity(0, 0);
+                    this.sprite.anims.play(chargingPrefix + i);
                 },
                 moveSpeed: 30,
         });
         enemies.push(newEnemy);
     }
     
+    return enemies;
+}
+ 
+function getSceneSetup() {   
     return new SceneSetup({
     units: [
         new PlayerUnit(
@@ -110,6 +153,6 @@ function getSceneSetup() {
         ),
     ],
     
-    enemies: enemies,
+    enemies: _initEnemies(),
     });
 }

@@ -89,20 +89,10 @@ function preload () {
             unit.skills[j].preload(this);
         }
     }
-    
-    let assets = {};
+       
     for (let i in sceneSetup.enemies) {
-        let enemy = sceneSetup.enemies[i];
-        
-        if (assets[enemy.assetPath] === true) {
-            continue;
-        }
-        
-        this.load.spritesheet(enemy.assetPath,
-                              enemy.assetPath,
-                              enemy.assetFrame);
-        
-        assets[enemy.assetPath] = true;
+        /* TODO: try not to load duplicate spritesheets? */
+        sceneSetup.enemies[i].preload(this);
     }
 }
 
@@ -374,10 +364,12 @@ function steerEnemies(state) {
                                           enemy.sprite.displayHeight);
                 enemy.container.body.setVelocity(v.dx, v.dy);
                 if ((v.dx === 0) && (v.dy === 0)) {
-                    enemy.state = Enemy.prototype.STATE_IDLE;
+                    enemy.state = Enemy.prototype.STATE_CASTING;
+                    enemy.attack(this);
                 }
                 break;
             case Enemy.prototype.STATE_CASTING:
+                /* animation callbacks take us out of this state */
                 break;
         }
     }
