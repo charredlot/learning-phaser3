@@ -1,12 +1,12 @@
-function Skill(display_name,
-               preload,
-               create,
-               select,
-               updateCursor,
-               finishCasting) {
+function Skill({displayName,
+                preload,
+                create,
+                select,
+                updateCursor,
+                finishCasting}) {
     /* html IDs can't have spaces */
-    this.name = display_name.replace(/\s/g, '');
-    this.display_name = display_name;
+    this.name = displayName.replace(/\s/g, '');
+    this.display_name = displayName;
     
     this.preload = preload;
     this.create = create;
