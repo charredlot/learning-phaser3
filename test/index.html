@@ -46,6 +46,12 @@ var config = {
         preload: preload,
         create: create,
         update: update
+    },
+    physics: {
+        default: 'arcade',
+        arcade: {
+            debug: true,
+        }
     }
 };
 
@@ -55,8 +61,8 @@ let unitSize = 128;
 let UNIT_SELECTED_IMG = "pink_cursor";
 
 function SceneState() {
-    this.units = [];
-    this.enemies = [];
+    this.units = null;
+    this.enemies = null;
     this.selected_unit = null;
     this.selected_skill = null;
     this.ui_state = SceneState.prototype.UI_STATE_UNSELECTED;
@@ -111,7 +117,7 @@ function PlayerUnit(display_name,
     this.cursor = null;
     this.move_target = null;
     this.has_move_target = false;
-    this.move_speed = 5;
+    this.move_speed = 50;
     this.skills = skills;
 }
 PlayerUnit.prototype.move_target_img = function () {
@@ -272,7 +278,6 @@ let units = [
 
 var gameOver = false;
 
-var debugScene;
 var debugThing;
 
 function preload () {
@@ -302,8 +307,10 @@ function create () {
     
     this.add.image(halfWidth, halfHeight, 'sky');
    
+   /* we don't want the physics engine to move enemies */
+    this.scene_state.enemies = this.physics.add.group({immovable: true});
     for (let i = 0; i < 3; i++) {
-        let enemy = this.add.sprite(200, 100 * (i + 1), 'weirdcloud');
+        let enemy = this.physics.add.sprite(200, 100 * (i + 1), 'weirdcloud');
         /* eh kind of wasteful, but annoying when the animations sync up */
         this.anims.create({
             key: "pulsating" + i,
@@ -317,27 +324,49 @@ function create () {
             repeat: -1,
         });
         enemy.anims.play("pulsating" + i);
-        this.scene_state.enemies.push(enemy);
+        this.scene_state.enemies.add(enemy);
     }
     
-    let len = units.length;
-    for (let i = 0; i < len; i++) {
+    /* we don't want the physics engine to move units */
+    this.scene_state.units = this.physics.add.group({immovable: true});
+    for (let i in units) {
         let unit = units[i];
         
-        let container = this.add.container(0, 0);
-        let s = this.add.sprite(0, 0, unit.name);
+        let s = this.physics.add.sprite(0, 0, unit.name);
         let cursor = this.add.sprite(0, 0, UNIT_SELECTED_IMG);
         let move_target = this.add.sprite(0, 0, unit.move_target_img());
+        let container = this.add.container(0, 0, [s, cursor]);
         
-        // container is the parent
-        container.add(s);
-        container.add(cursor);
+        /*
+         * sprite origin is at the center, but the container origin is at
+         * the top left. set the cursor and sprite's relative position properly
+         */
+        s.x = s.displayWidth / 2;
+        s.y = s.displayHeight / 2;
+        cursor.x = cursor.displayWidth / 2;
+        cursor.y = cursor.displayHeight / 2;
         
-        container.x = s.displayWidth / 2;
-        container.y = ((i + 1) * s.displayHeight) + (s.displayHeight / 2);
-                
+        /*
+         * this is how container gets a velocity...took a hell of a time to
+         * find this >:O
+         * http://labs.phaser.io/index.html
+         * not ideal but we can't set a velocity on container without
+         * doing this. this also means the physics engine doesn't handle
+         * collisions with the sprite and other things for some reason.
+         * maybe related to the sprite body relative velocity being 0?
+         * it's unclear
+         */
+        this.physics.world.enable(container);
+        
+        /*
+         * set the body size for collisions based on the sprite
+         * XXX: not sure how to do this for non rectangular things
+         */
+        let boundingBox = s.getBounds();
+        container.body.setSize(boundingBox.width, boundingBox.height);
+        
         s.setInteractive();
-        s.player_unit = units[i];        
+        s.__player_unit = units[i];        
         
         cursor.visible = false;
         move_target.visible = false;
@@ -389,11 +418,17 @@ function create () {
         
         unit.initSkillsUI(this.scene_state);
         
-        this.scene_state.units.push(unit);
+        this.scene_state.units.add(unit.sprite);
+        
+        this.physics.add.collider(unit.container,
+                                  this.scene_state.enemies);
     }
+
+    /* enemies should collide with themselves */
+    this.physics.add.collider(this.scene_state.enemies,
+                              this.scene_state.enemies);
     
     this.input.on("gameobjectdown", objectClicked);
-    
         
     // warning: these are numbers, they become strings if they're object keys
     let codes = [
@@ -408,61 +443,75 @@ function create () {
         let key = this.input.keyboard.addKey(codes[i]);
         this.scene_state.skill_keys[codes[i]] = key;
     }
-    
-    debugScene = this;
 }
 
-function objectClicked(ptr, obj) {
+function objectClicked(ptr, sprite) {
     // XXX: not sure on ordering guarantees between this and update    
     let state = this.scene.scene_state;
-
-    if (state.selected_unit !== obj.player_unit) {
-        let unit = obj.player_unit;
-        
+    let unit = sprite.__player_unit;
+    
+    if (state.selected_unit !== unit) {
         state.transition(SceneState.prototype.UI_STATE_SELECTED, unit);
         
         unit.cursor.visible = true;
         
-        obj.player_unit.showSkillsUI();
+        unit.showSkillsUI();
     }
       
     // XXX: this seems hella janky, but we don't want a dup event in the update loop
     ptr.justDown = false;
 }
 
-function clamp_movement(orig_v, dv, target_v) {
+function clamp_velocity(orig_v, dv, target_v, size) {
     let new_v = orig_v + dv;
     
+    /*
+     * set velocity to 0 if close to the target, but the divide
+     * is arbitrary. it's a fraction of the size of the moving
+     * object. without it though it'll stop too early before
+     * the move target
+     */
     if (dv < 0) {
-        if (new_v < target_v) {
-            new_v = target_v;
+        if ((new_v < target_v) &&
+            (Math.abs(target_v - orig_v) < (size / 15))) {
+            return 0;
         }
     }
     else {
-        if (new_v > target_v) {
-            new_v = target_v;
+        if ((new_v > target_v) &&
+            (Math.abs(target_v - orig_v) < (size / 15))) {
+            return 0;
         }
     }
     
-    return Math.round(new_v);
+    return dv;
 }
 
 function steer_units(state) {
-    if (state.ui_state === SceneState.prototype.UI_STATE_CASTING) {
-        // halt movement while casting
-        return;
-    }
-    
     let len = state.units.length;
-    for (let i = 0; i < len; i++) {
-        let unit = state.units[i];
+    for (let i in state.units.children.entries) {
+        let unit = state.units.children.entries[i].__player_unit;
         
         if (!unit.has_move_target) {
             continue;
         }
         
-        let dx = unit.move_target.x - unit.container.x;
-        let dy = unit.move_target.y - unit.container.y;        
+        /* XXX: a bit messy, maybe should introduce a unit state machine */
+        if (unit.sprite.anims.isPlaying &&
+            (unit.sprite.anims.currentAnim.key == "casting")) {
+            continue;
+        }
+        
+        /*
+         * the container origin is top left, but we want the unit's
+         * center to reach the move target
+         */
+        let src_x = unit.container.body.center.x;
+        let src_y = unit.container.body.center.y;
+        let dst_x = unit.move_target.x;
+        let dst_y = unit.move_target.y;
+        let dx = dst_x - src_x;
+        let dy = dst_y - src_y;
         let dist = Math.sqrt((dx * dx) + (dy * dy));
         
         if (dist < Number.EPSILON) {
@@ -471,16 +520,19 @@ function steer_units(state) {
             continue;
         }
         
-        let move_dx = (dx / dist) * unit.move_speed;
-        let move_dy = (dy / dist) * unit.move_speed;
+        let move_dx = (dx * unit.move_speed) / dist;
+        let move_dy = (dy * unit.move_speed) / dist;
         
-        // need some logic to not overshoot
-        unit.container.x = clamp_movement(unit.container.x,
-                                          move_dx,
-                                          unit.move_target.x);
-        unit.container.y = clamp_movement(unit.container.y,
-                                          move_dy,
-                                          unit.move_target.y);
+        /* need some logic to not overshoot */
+        unit.container.body.setVelocity(
+            clamp_velocity(src_x,
+                           move_dx,
+                           dst_x,
+                           unit.sprite.displayWidth),
+            clamp_velocity(src_y,
+                           move_dy,
+                           dst_y,
+                           unit.sprite.displayHeight));
     }
 }
 
@@ -517,6 +569,9 @@ function handleUnitClicks(state, unit, ap) {
             let skill_obj = state.selected_skill.dom(unit);
             skill_obj.removeClass('skillselected');
             skill_obj.addClass('skillcasting');
+            
+            /* can't move while casting */
+            unit.container.body.setVelocity(0, 0);
             unit.sprite.anims.play('casting');
             state.transition(SceneState.prototype.UI_STATE_CASTING);
         }
