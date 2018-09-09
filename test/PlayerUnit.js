@@ -23,9 +23,6 @@ PlayerUnit.prototype.setMoveTarget = function (pos) {
     this.move_target.y = Math.round(pos.y);
     this.move_target.visible = true;
     this.has_move_target = true;
-    
-    console.log("move to " + this.move_target.x + "," +
-                 this.move_target.y);
 }
 PlayerUnit.prototype.initSkillsUI = function(state) {
     let skill_list_id = "skilllist_" + this.name;
