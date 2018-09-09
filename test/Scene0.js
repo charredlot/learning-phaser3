@@ -29,6 +29,7 @@ function _initEnemies() {
                     sprite.y = sprite.displayHeight / 2;
                     
                     ball.setVisible(false);
+                    ball.setActive(false);
                     
                     /*
                      * eh kind of wasteful, but annoying when the animations
@@ -108,6 +109,7 @@ function getSceneSetup() {
                      
                         target.setVisible(false);
                         effect.setVisible(false);
+                        effect.setActive(false);
                      
                         this.cursor_target = target;
                         this.effect = effect;
@@ -123,11 +125,13 @@ function getSceneSetup() {
                         this.effect.x = this.cursor_target.x;
                         this.effect.y = this.cursor_target.y;
                         this.effect.setVisible(true);
+                        this.effect.setActive(true);
                         
                         state.scene.time.addEvent({
                             delay: 3000,
                             callback: function () {
                                 this.effect.setVisible(false);
+                                this.effect.setActive(false);
                             },
                             callbackScope: this,
                         });
