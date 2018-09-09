@@ -9,6 +9,8 @@
     <script src="/SceneState.js"></script>
     <script src="/PlayerUnit.js"></script>
     <script src="/Skill.js"></script>
+    <script src="/SceneSetup.js"></script>
+    <script src="/Scene0.js"></script>
     <style type="text/css">
         body {
             margin: 0;
@@ -64,66 +66,6 @@ let imgScale = window.devicePixelRatio / 3;
 let unitSize = 128;
 let UNIT_SELECTED_IMG = "pink_cursor";
 
-let units = [
-    new PlayerUnit("Clover",
-                   "assets/ferretything.png",
-                   "assets/green_target18.png",
-                   [
-                    new Skill("Entangle",
-                              function(scene) {
-                                 /* TODO: clean up */
-                                 scene.load.image('entangle_target', 'assets/entangle_target_green.png');
-                                 scene.load.image('entangle_effect', 'assets/entangle_effect.png');
-                              },
-                              function(scene) {
-                                 let target = scene.add.sprite(0, 0, 'entangle_target');
-                                 let effect = scene.add.sprite(0, 0, 'entangle_effect');
-                                 
-                                 target.visible = false;
-                                 effect.visible = false;
-                                 
-                                 this.cursor_target = target;
-                                 this.effect = effect;
-                              },
-                              function(unit, select) {
-                                 this.cursor_target.visible = select;
-                              },
-                              function(state, unit, ap) {
-                                 this.cursor_target.x = ap.position.x;
-                                 this.cursor_target.y = ap.position.y;
-                              },
-                              function(state) {
-                                 this.effect.x = this.cursor_target.x;
-                                 this.effect.y = this.cursor_target.y;
-                                 
-                                 this.effect.visible = true;
-                                 state.scene.time.addEvent({
-                                     delay: 3000,
-                                     callback: function () {
-                                         this.effect.visible = false;
-                                     },
-                                     callbackScope: this,
-                                 });
-                              },
-                    ),
-                    new Skill("Vine Pull",
-                              function(scene) {},
-                              function(scene) {},
-                              function(unit, select) {},
-                              function(state, unit, ap) {},
-                              function(state) {},
-                    ),
-                    new Skill("Leaf Burst",
-                              function(scene) {},
-                              function(scene) {},
-                              function(unit, select) {},
-                              function(state, unit, ap) {},
-                              function(state) {},
-                    ),
-                   ]
-                  ),
-]
-
 var gameOver = false;
 
 var debugThing;
@@ -136,9 +78,8 @@ function preload () {
     this.load.spritesheet('weirdcloud', 'assets/weird_cloud.png',
                           {frameWidth: 64, frameHeight: 64});
 
-    let len = units.length;
-    for (let i = 0; i < len; i++) {
-        let unit = units[i];
+    for (let i in sceneSetup.units) {
+        let unit = sceneSetup.units[i];
         this.load.spritesheet(unit.name, unit.char_asset_path,
                               {frameWidth: 64, frameHeight: 64});
         this.load.image(unit.move_target_img(), unit.move_target_path);
@@ -186,8 +127,8 @@ function create () {
     this.scene_state.units = this.physics.add.group({bounceX: -1,
                                                      bounceY: -1});
 
-    for (let i in units) {
-        let unit = units[i];
+    for (let i in sceneSetup.units) {
+        let unit = sceneSetup.units[i];
         
         let s = this.physics.add.sprite(0, 0, unit.name);
         let cursor = this.add.sprite(0, 0, UNIT_SELECTED_IMG);
@@ -221,12 +162,12 @@ function create () {
          */
         let boundingBox = s.getBounds();
         container.body.setSize(boundingBox.width, boundingBox.height);
-        container.__player_unit = units[i];
+        container.__player_unit = unit;
         
         s.body.moves = false;
         s.setInteractive();
         s.setCollideWorldBounds(true);
-        s.__player_unit = units[i];        
+        s.__player_unit = unit;
         
         cursor.visible = false;
         move_target.visible = false;
