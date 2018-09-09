@@ -72,6 +72,8 @@ function _initEnemies() {
                             sprite.anims.play(pulsatingPrefix + i);
                         }
                     );
+                    
+                    this.ball = ball;
                     this.createCommon(scene, container, sprite);
                 },
                 attack: function(scene) {
