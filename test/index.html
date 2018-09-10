@@ -221,7 +221,10 @@ function objectClicked(ptr, sprite) {
         unit.showSkillsUI();
     }
       
-    // XXX: this seems hella janky, but we don't want a dup event in the update loop
+    /*
+     * XXX: this seems hella janky, but without this we get a duplicate event
+     * in the update loop
+     */
     ptr.justDown = false;
 }
 
