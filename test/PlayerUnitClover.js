@@ -1,10 +1,32 @@
+function _createShield(scene, unit, shieldPath) {
+    let shield = scene.add.sprite(0, 0, shieldPath);
+    
+    scene.anims.create({
+        key: unit.shieldAnimKey(),
+        frames: [
+            {key: shieldPath, frame: 0},
+            {key: shieldPath, frame: 1},
+            {key: shieldPath, frame: 2},
+            {key: shieldPath, frame: 3},
+        ],
+        frameRate: 8,
+        hideOnComplete: true,
+    });
+    
+    shield.setVisible(false);
+    
+    return shield;
+}
+
 function createPlayerUnitClover() {
+    let displayName = "Clover";
     let charAssetPath = "assets/ferretything.png";
     let moveTargetPath = "assets/green_target18.png";
     let cursorPath = 'assets/pink_cursor.png';
+    let shieldPath = 'assets/green_shield.png';
     
     return new PlayerUnit({
-        displayName: "Clover",
+        displayName: displayName,
         portraitURL: "/assets/ferretything_portrait.png",
         preload: function(scene) {
             scene.load.spritesheet(charAssetPath,
@@ -12,22 +34,28 @@ function createPlayerUnitClover() {
                                    {frameWidth: 64, frameHeight: 64});
             scene.load.image(moveTargetPath, moveTargetPath);
             scene.load.image(cursorPath, cursorPath);
+            scene.load.spritesheet(shieldPath, shieldPath,
+                                   {frameWidth: 72, frameHeight: 72});
         },
         create: function(scene) {
             let sprite = scene.physics.add.sprite(0, 0, charAssetPath);
             let cursor = scene.add.sprite(0, 0, cursorPath);
             let move_target = scene.add.sprite(0, 0, moveTargetPath);
-            let container = scene.add.container(0, 0, [sprite, cursor]);
+            let shield = _createShield(scene, this, shieldPath);
+            let container = scene.add.container(0, 0, [sprite, cursor, shield]);
+            
             
             /*
              * sprite origin is at the center, but the container origin is at
-             * the top left. set the cursor and sprite's relative position
-             * properly
+             * the top left. since sprite is the "main" thing, set everything
+             * based on its center
              */
             sprite.x = sprite.displayWidth / 2;
             sprite.y = sprite.displayHeight / 2;
-            cursor.x = cursor.displayWidth / 2;
-            cursor.y = cursor.displayHeight / 2;
+            cursor.x = sprite.displayWidth / 2;
+            cursor.y = sprite.displayHeight / 2;
+            shield.x = sprite.displayWidth / 2;
+            shield.y = sprite.displayHeight / 2;
             
             /*
              * this is how container gets a velocity...took a hell of a time to
@@ -89,7 +117,7 @@ function createPlayerUnitClover() {
             );
 
             cursor.setVisible(false);
-            move_target.setVisible(false);
+            move_target.setVisible(false);            
 
             /* useful to have back pointers from the phaser objects */
             container.__player_unit = this;
@@ -99,6 +127,7 @@ function createPlayerUnitClover() {
             this.sprite = sprite;
             this.cursor = cursor;
             this.move_target = move_target;
+            this.shield = shield;
         },
         maxShield: 150,
         skills: [

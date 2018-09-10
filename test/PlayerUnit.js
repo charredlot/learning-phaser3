@@ -24,6 +24,13 @@ PlayerUnit.prototype.UNIT_SELECTED_IMG = "pink_cursor";
 PlayerUnit.prototype.statusDomID = function () {
     return 'unitstatus_' + this.name;
 }
+PlayerUnit.prototype.shieldAnimKey = function() {
+    return this.displayName + "_shield";
+}
+PlayerUnit.prototype.shieldAnimPlay = function() {
+    this.shield.setVisible(true);
+    this.shield.anims.play(this.shieldAnimKey());
+}
 PlayerUnit.prototype.setMoveTarget = function (pos) {
     this.move_target.x = Math.round(pos.x);
     this.move_target.y = Math.round(pos.y);
