@@ -23,6 +23,13 @@ Enemy.prototype.STATE_IDLE = 0;
 Enemy.prototype.STATE_MOVING = 1;
 Enemy.prototype.STATE_CASTING = 2;
 Enemy.prototype.createCommon = function(scene, container, sprite) {
+    /*
+     * WARNING: adding things to a group apparentl wipes some settings,
+     * e.g. setCollideWorldBounds, so make sure to do it first.
+     * there might be other implications as well
+     */
+    scene.scene_state.enemies.add(container);
+    
     scene.physics.world.enable([container, sprite]);
     
     let boundingBox = sprite.getBounds();

@@ -164,16 +164,13 @@ function create () {
     this.scene_state.enemies = this.physics.add.group();
     for (let i in sceneSetup.enemies) {
         let enemy = sceneSetup.enemies[i];
-        
         enemy.create(this);
-        
-        this.scene_state.enemies.add(enemy.container);
     }
     
     this.scene_state.units = this.physics.add.group({bounceX: -1,
                                                      bounceY: -1});
     for (let i in sceneSetup.units) {
-        let unit = sceneSetup.units[i];       
+        let unit = sceneSetup.units[i];
 
         unit.create(this);
         for (let j in unit.skills) {
@@ -181,8 +178,6 @@ function create () {
         }
         
         unit.initSkillsUI(this.scene_state);
-        
-        this.scene_state.units.add(unit.container);
     }
 
     this.physics.add.collider(this.scene_state.units,

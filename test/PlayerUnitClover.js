@@ -44,6 +44,12 @@ function createPlayerUnitClover() {
             let shield = _createShield(scene, this, shieldPath);
             let container = scene.add.container(0, 0, [sprite, cursor, shield]);
             
+            /*
+             * WARNING: adding things to a group apparentl wipes some settings,
+             * e.g. setCollideWorldBounds, so make sure to do it first.
+             * there might be other implications as well
+             */
+            scene.scene_state.units.add(container);
             
             /*
              * sprite origin is at the center, but the container origin is at
@@ -68,18 +74,18 @@ function createPlayerUnitClover() {
              * it's unclear
              */
             scene.physics.world.enable([container, sprite]);
-            
+
             /*
              * set the body size for collisions based on the sprite
              * XXX: not sure how to do this for non rectangular things
              */
             let boundingBox = sprite.getBounds();
             container.body.setSize(boundingBox.width, boundingBox.height);
+            container.body.setCollideWorldBounds(true);
             
             /* immovable doesn't work properly to avoid getting pushed */
             sprite.body.moves = false;
             sprite.setInteractive();
-            sprite.setCollideWorldBounds(true);
             
             // XXX: maybe make this more flexible
             scene.anims.create({
