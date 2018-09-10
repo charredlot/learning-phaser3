@@ -12,7 +12,7 @@ function createEnemyCloud(i) {
             scene.load.image(projectile, projectile);
         },
         create: function(scene) {
-            let ball = scene.add.sprite(0, 0, projectile);
+            let ball = scene.add.sprite(100, 100, projectile);
             let sprite = scene.physics.add.sprite(0,
                                                   0,
                                                   cloud);
@@ -23,9 +23,6 @@ function createEnemyCloud(i) {
             /* sprite origin is center, container is top left*/
             sprite.x = sprite.displayWidth / 2;
             sprite.y = sprite.displayHeight / 2;
-            
-            ball.setVisible(false);
-            ball.setActive(false);
             
             /*
              * eh kind of wasteful, but annoying when the animations
@@ -84,7 +81,10 @@ function createEnemyCloud(i) {
             );
             
             scene.physics.world.enable(ball);
+            ball.setVisible(false);
+            ball.setActive(false);
             this.ball = ball;
+            
             this.createCommon(scene, container, sprite);
             
             sprite.anims.play(pulsatingPrefix + i);
