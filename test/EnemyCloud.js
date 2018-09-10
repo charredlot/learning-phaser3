@@ -8,7 +8,7 @@ function createEnemyCloud(i) {
         displayName: 'weirdcloud' + i,
         preload: function(scene) {
             scene.load.spritesheet(cloud, cloud,
-            {frameWidth: 64, frameHeight: 64});
+                                   {frameWidth: 64, frameHeight: 64});
             scene.load.image(projectile, projectile);
         },
         create: function(scene) {
