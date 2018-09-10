@@ -10,6 +10,7 @@ function createEnemyCloud(i) {
             scene.load.spritesheet(cloud, cloud,
                                    {frameWidth: 64, frameHeight: 64});
             scene.load.image(projectile, projectile);
+            this.preloadCommon(scene);
         },
         create: function(scene) {
             let ball = scene.physics.add.sprite(100, 100, projectile);

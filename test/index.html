@@ -327,8 +327,31 @@ function steerEnemies(state) {
             case Enemy.prototype.STATE_IDLE:
                 /* pick a random move target */
                 let bounds = state.scene.physics.world.bounds;
-                enemy.moveTarget.x = Math.random() * bounds.width;
-                enemy.moveTarget.y = Math.random() * bounds.height;
+                let marginX = enemy.sprite.displayWidth;
+                let marginY = enemy.sprite.displayHeight;
+                
+                enemy.moveTarget.x = (
+                    marginX +
+                    (Math.random() * (bounds.width - (2 * marginX)))
+                );
+                enemy.moveTarget.y = (
+                    marginY +
+                    (Math.random() * (bounds.height - (2 * marginY)))
+                );
+                
+                if (config.physics.arcade.debug) {
+                    enemy.debugTarget.x = enemy.moveTarget.x;
+                    enemy.debugTarget.y = enemy.moveTarget.y;
+                    enemy.debugTarget.setVisible(true);
+                    console.log(
+                        enemy.sprite.displayWidth,
+                        enemy.sprite.displayHeight,
+                        bounds.width,
+                        bounds.height,
+                        enemy.debugTarget.x,
+                        enemy.debugTarget.y);
+                }
+                
                 enemy.state = Enemy.prototype.STATE_MOVING;
                 break;
             case Enemy.prototype.STATE_MOVING:

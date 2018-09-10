@@ -17,14 +17,20 @@ function Enemy({displayName,
     
     this.container = null;
     this.sprite = null;
+    this.debugTarget = null;
     this.moveSpeed = moveSpeed;
 }
 Enemy.prototype.STATE_IDLE = 0;
 Enemy.prototype.STATE_MOVING = 1;
 Enemy.prototype.STATE_CASTING = 2;
+Enemy.prototype.DEBUG_TARGET_PATH = 'assets/debug_target.png';
+Enemy.prototype.preloadCommon = function(scene) {
+    scene.load.image(Enemy.prototype.DEBUG_TARGET_PATH,
+                     Enemy.prototype.DEBUG_TARGET_PATH);
+}
 Enemy.prototype.createCommon = function(scene, container, sprite) {
     /*
-     * WARNING: adding things to a group apparentl wipes some settings,
+     * WARNING: adding things to a group apparently wipes some settings,
      * e.g. setCollideWorldBounds, so make sure to do it first.
      * there might be other implications as well
      */
@@ -42,8 +48,13 @@ Enemy.prototype.createCommon = function(scene, container, sprite) {
      */
     sprite.body.moves = false;
 
+    this.debugTarget = scene.add.sprite(0, 0,
+                                        Enemy.prototype.DEBUG_TARGET_PATH);
+    this.debugTarget.setVisible(false);
+    
     container.__enemy = this;
     sprite.__enemy = this;
     this.container = container;
     this.sprite = sprite;
+    
 }
