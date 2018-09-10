@@ -109,7 +109,6 @@ var config = {
 /* assumes highest supported DPR is 3 */
 let imgScale = window.devicePixelRatio / 3;
 let unitSize = 128;
-let UNIT_SELECTED_IMG = "pink_cursor";
 
 var gameOver = false;
 
@@ -119,14 +118,11 @@ function preload () {
     this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
     this.load.image('star', 'assets/star.png');
-    this.load.image(UNIT_SELECTED_IMG, 'assets/pink_cursor.png');
 
     for (let i in sceneSetup.units) {
         let unit = sceneSetup.units[i];
-        this.load.spritesheet(unit.name, unit.char_asset_path,
-                              {frameWidth: 64, frameHeight: 64});
-        this.load.image(unit.move_target_img(), unit.move_target_path);
         
+        unit.preload(this);
         for (let j in unit.skills) {
             unit.skills[j].preload(this);
         }
@@ -153,99 +149,15 @@ function create () {
         this.scene_state.enemies.add(enemy.container);
     }
     
-    /* see above comment about collisions and immovable */
     this.scene_state.units = this.physics.add.group({bounceX: -1,
                                                      bounceY: -1});
-
     for (let i in sceneSetup.units) {
-        let unit = sceneSetup.units[i];
-        
-        let s = this.physics.add.sprite(0, 0, unit.name);
-        let cursor = this.add.sprite(0, 0, UNIT_SELECTED_IMG);
-        let move_target = this.add.sprite(0, 0, unit.move_target_img());
-        let container = this.add.container(0, 0, [s, cursor]);
-        
-        /*
-         * sprite origin is at the center, but the container origin is at
-         * the top left. set the cursor and sprite's relative position properly
-         */
-        s.x = s.displayWidth / 2;
-        s.y = s.displayHeight / 2;
-        cursor.x = cursor.displayWidth / 2;
-        cursor.y = cursor.displayHeight / 2;
-        
-        /*
-         * this is how container gets a velocity...took a hell of a time to
-         * find this >:O
-         * http://labs.phaser.io/index.html
-         * not ideal but we can't set a velocity on container without
-         * doing this. this also means the physics engine doesn't handle
-         * collisions with the sprite and other things for some reason.
-         * maybe related to the sprite body relative velocity being 0?
-         * it's unclear
-         */
-        this.physics.world.enable([container, s]);
-        
-        /*
-         * set the body size for collisions based on the sprite
-         * XXX: not sure how to do this for non rectangular things
-         */
-        let boundingBox = s.getBounds();
-        container.body.setSize(boundingBox.width, boundingBox.height);
-        container.__player_unit = unit;
-        
-        s.body.moves = false;
-        s.setInteractive();
-        s.setCollideWorldBounds(true);
-        s.__player_unit = unit;
-        
-        cursor.setVisible(false);
-        move_target.setVisible(false);
-                
-        unit.container = container;
-        unit.sprite = s;
-        unit.cursor = cursor;
-        unit.move_target = move_target;
-        
+        let unit = sceneSetup.units[i];       
+
+        unit.create(this);
         for (let j in unit.skills) {
             unit.skills[j].create(this);
         }
-        
-        // XXX: maybe make this more flexible
-        this.anims.create({
-            key: "casting",
-            frames: [
-                {key: unit.name, frame: 4},
-                {key: unit.name, frame: 5},
-                {key: unit.name, frame: 6},
-                {key: unit.name, frame: 5},
-                {key: unit.name, frame: 6},
-                {key: unit.name, frame: 7},
-                {key: unit.name, frame: 0},
-            ],
-            frameRate: 3,
-        });
-        
-        // XXX: not sure if this is correct, not well documented yet
-        let parent = this;
-        s.on("animationcomplete",
-             function(anim, frame) {
-                if (anim.key == "casting") {
-                    /*
-                     * XXX: would be nice to pass the skill with the event
-                     * but seems like globals are the only way
-                     */
-                    let skill = parent.scene_state.selected_skill;
-                                
-                    /*
-                     * not the clearest, but selectSkill should happen last
-                     * since it causes a ui_state transition
-                     */
-                    skill.finishCasting(parent.scene_state);
-                    skill.selectSkill(parent.scene_state.selected_unit, false);
-                }
-             },
-        );
         
         unit.initSkillsUI(this.scene_state);
         

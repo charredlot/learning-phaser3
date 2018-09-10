@@ -1,15 +1,16 @@
 function PlayerUnit({displayName,
-                     charAssetPath,
-                     moveTargetPath,
                      portraitURL,
+                     preload,
+                     create,
                      maxShield,
                      skills}) {
     /* html IDs can't have spaces */
     this.name = displayName.replace(/\s/g, '');
     this.displayName = displayName;
-    this.char_asset_path = charAssetPath;
-    this.move_target_path = moveTargetPath;
     this.portraitURL = portraitURL;
+    this.preload = preload;
+    this.create = create;
+    
     this.container = null;
     this.sprite = null;
     this.cursor = null;
@@ -19,9 +20,7 @@ function PlayerUnit({displayName,
     this.maxShield = maxShield;
     this.skills = skills;
 }
-PlayerUnit.prototype.move_target_img = function () {
-    return this.name + "_movetarget";
-}
+PlayerUnit.prototype.UNIT_SELECTED_IMG = "pink_cursor";
 PlayerUnit.prototype.statusDomID = function () {
     return 'unitstatus_' + this.name;
 }
