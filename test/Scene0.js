@@ -15,6 +15,7 @@ function getSceneSetup() {
             "Clover",
             "assets/ferretything.png",
             "assets/green_target18.png",
+            150,
             [
                 new Skill({
                     displayName: "Entangle",

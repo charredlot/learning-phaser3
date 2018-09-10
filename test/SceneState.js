@@ -15,10 +15,13 @@ SceneState.prototype.transition = function(new_state, ctx) {
         case SceneState.prototype.UI_STATE_UNSELECTED:
             break;
         case SceneState.prototype.UI_STATE_SELECTED:
+            let newUnit = ctx;
             if ((this.ui_state === SceneState.prototype.UI_STATE_UNSELECTED) ||
                 (this.ui_state === SceneState.prototype.UI_STATE_SELECTED)) {
                 $('.skillsui').removeClass('skillselected');
-                this.selected_unit = ctx;
+                $('.unitstatus').removeClass('unitselected');
+                $('#' + newUnit.statusDomID()).addClass('unitselected');
+                this.selected_unit = newUnit;
             }
             else if (this.ui_state === SceneState.prototype.UI_STATE_CASTING) {
                 $('.skillsui').removeClass('skillcasting');

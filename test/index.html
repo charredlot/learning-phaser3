@@ -17,6 +17,25 @@
         body {
             margin: 0;
         }
+        /* this is magic to undo floating for the next row */
+        #unitstatuses:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        .unitstatus {
+            float: left;
+            width: 25%;
+            background: #addeff;
+            border: 5px solid white;
+        }
+        .unitselected {
+            border: 5px solid red;
+        }
+        .shieldbar {
+            width: 100px;
+            height: 40px;
+        }
         .skillsui {
             border: 5px solid black;
         }
@@ -25,7 +44,7 @@
         }
         .skillcasting {
             border: 5px solid blue;
-        }
+        }        
     </style>
 </head>
 <body>
@@ -41,7 +60,21 @@ window.onload = function() {
     sceneState = new SceneState();
     sceneSetup = getSceneSetup();
     game = new Phaser.Game(config);
-     
+    
+    for (let i in sceneSetup.units) {
+        let unit = sceneSetup.units[i];
+        let status = $('#unitstatustemplate').clone();
+        
+        status.attr('id', unit.statusDomID());
+        status.find('.unitname').text(unit.displayName);
+        
+        let progress = status.find('progress');
+        progress.attr('max', unit.maxShield);
+        progress.attr('value', unit.maxShield);
+        
+        $('#unitstatuses').append(status);
+        status.show();
+    }
 };
 
 /* probably introducing some rounding error here */
@@ -490,6 +523,19 @@ function update () {
     steerEnemies(state);
 }
 </script>
+<div id="unitstatuses">
+    <div id="unitstatustemplate" class="unitstatus" style="display: none">
+        <div>
+            <label class="unitname">DisplayName</label>
+        </div>
+        <div class="unitportrait">
+        </div>
+        <div>
+            <label>Shield:</label>
+            <progress class="unitshield" value="75" max="100"></progress>
+        </div>
+    </div>
+</div>
 <div id="skills" style="visibility: collapse;">
     <div id="skilllisttemplate" style="visibility: collapse;">
         <input type="button" class="skillsui" id="skilltemplate" value="Skill1"

@@ -1,10 +1,11 @@
-function PlayerUnit(display_name,
+function PlayerUnit(displayName,
                     char_asset_path,
                     move_target_path,
+                    maxShield,
                     skills) {
     /* html IDs can't have spaces */
-    this.name = display_name.replace(/\s/g, '');
-    this.display_name = display_name;
+    this.name = displayName.replace(/\s/g, '');
+    this.displayName = displayName;
     this.char_asset_path = char_asset_path;
     this.move_target_path = move_target_path;
     this.container = null;
@@ -13,10 +14,14 @@ function PlayerUnit(display_name,
     this.move_target = null;
     this.has_move_target = false;
     this.move_speed = 50;
+    this.maxShield = maxShield;
     this.skills = skills;
 }
 PlayerUnit.prototype.move_target_img = function () {
     return this.name + "_movetarget";
+}
+PlayerUnit.prototype.statusDomID = function () {
+    return 'unitstatus_' + this.name;
 }
 PlayerUnit.prototype.setMoveTarget = function (pos) {
     this.move_target.x = Math.round(pos.x);
