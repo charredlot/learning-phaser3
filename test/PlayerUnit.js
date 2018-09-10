@@ -1,13 +1,15 @@
-function PlayerUnit(displayName,
-                    char_asset_path,
-                    move_target_path,
-                    maxShield,
-                    skills) {
+function PlayerUnit({displayName,
+                     charAssetPath,
+                     moveTargetPath,
+                     portraitURL,
+                     maxShield,
+                     skills}) {
     /* html IDs can't have spaces */
     this.name = displayName.replace(/\s/g, '');
     this.displayName = displayName;
-    this.char_asset_path = char_asset_path;
-    this.move_target_path = move_target_path;
+    this.char_asset_path = charAssetPath;
+    this.move_target_path = moveTargetPath;
+    this.portraitURL = portraitURL;
     this.container = null;
     this.sprite = null;
     this.cursor = null;

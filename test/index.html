@@ -29,6 +29,9 @@
             background: #addeff;
             border: 5px solid white;
         }
+        .unitname {
+            font-weight: bold;
+        }
         .unitselected {
             border: 5px solid red;
         }
@@ -67,6 +70,10 @@ window.onload = function() {
         
         status.attr('id', unit.statusDomID());
         status.find('.unitname').text(unit.displayName);
+        
+        let portrait = $("<img>");
+        portrait.attr('src', unit.portraitURL);
+        status.find('.unitportrait').append(portrait);
         
         let progress = status.find('progress');
         progress.attr('max', unit.maxShield);

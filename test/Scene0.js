@@ -11,12 +11,13 @@ function _initEnemies() {
 function getSceneSetup() {   
     return new SceneSetup({
     units: [
-        new PlayerUnit(
-            "Clover",
-            "assets/ferretything.png",
-            "assets/green_target18.png",
-            150,
-            [
+        new PlayerUnit({
+            displayName: "Clover",
+            charAssetPath: "assets/ferretything.png",
+            moveTargetPath: "assets/green_target18.png",
+            portraitURL: "/assets/ferretything_portrait.png",
+            maxShield: 150,
+            skills: [
                 new Skill({
                     displayName: "Entangle",
                     preload: function(scene) {
@@ -77,7 +78,7 @@ function getSceneSetup() {
                     finishCasting: function(state) {},
                 }),
             ]
-        ),
+        }),
     ],
     
     enemies: _initEnemies(),
