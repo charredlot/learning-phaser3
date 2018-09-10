@@ -43,3 +43,21 @@ SceneState.prototype.transition = function(new_state, ctx) {
                 new_state);
     this.ui_state = new_state;
 }
+SceneState.prototype.randomUnit = function () {
+    let numUnits = this.units.getLength();
+    let unitIndex = 0;
+    let target = Math.random() * numUnits;
+    
+    for (unitIndex = 0; unitIndex < numUnits; unitIndex++) {
+        if ((unitIndex <= target) && (target <= unitIndex + 1)) {
+            break;
+        }
+    }
+    
+    if (unitIndex >= numUnits) {
+        /* shouldn't happen unless it's game over but */
+         return null;
+    }
+    
+    return this.units.children.entries[unitIndex].__player_unit;
+}

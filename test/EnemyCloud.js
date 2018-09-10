@@ -12,7 +12,7 @@ function createEnemyCloud(i) {
             scene.load.image(projectile, projectile);
         },
         create: function(scene) {
-            let ball = scene.add.sprite(100, 100, projectile);
+            let ball = scene.physics.add.sprite(100, 100, projectile);
             let sprite = scene.physics.add.sprite(0,
                                                   0,
                                                   cloud);
@@ -59,21 +59,26 @@ function createEnemyCloud(i) {
                         return;
                     }
                     
-                    /* shoot at a random angle for now */
-                    let h = scope.sprite.displayHeight / 2;
-                    let angle = 2 * Math.PI * Math.random();
-                    let vx = Math.cos(angle);
-                    let vy = Math.sin(angle);
-                    let x = (scope.container.body.center.x +
-                             (h * vx));
-                    let y = (scope.container.body.center.y +
-                             (h * vy));
+                    let target = scene.scene_state.randomUnit();
+                    if (target === null) {
+                        scope.state = Enemy.prototype.STATE_IDLE;
+                        sprite.anims.play(pulsatingPrefix + i);
+                        return;
+                    }
+                    
+                    let dx = target.sprite.body.x - scope.sprite.body.x;
+                    let dy = target.sprite.body.y - scope.sprite.body.y;
+                    let dist = Math.sqrt((dx * dx) + (dy * dy));
 
-                    scope.ball.x = x;
-                    scope.ball.y = y;
                     scope.ball.setActive(true);
                     scope.ball.setVisible(true);
-                    scope.ball.body.setVelocity(vx * 60, vy * 60);
+                    scope.ball.enableBody(true,
+                                          scope.container.x + scope.sprite.x,
+                                          scope.container.y + scope.sprite.y,
+                                          true,
+                                          true);
+                    scope.ball.body.setVelocity(dx * 60 / dist, dy * 60 / dist);
+                    scope.ball.body.setAngularVelocity(360);
                     
                     scope.state = Enemy.prototype.STATE_IDLE;
                     sprite.anims.play(pulsatingPrefix + i);
@@ -81,13 +86,27 @@ function createEnemyCloud(i) {
             );
             
             scene.physics.world.enable(ball);
-            ball.setVisible(false);
             ball.setActive(false);
+            ball.setVisible(false);
+            ball.disableBody(true, true);
             this.ball = ball;
             
             this.createCommon(scene, container, sprite);
             
             sprite.anims.play(pulsatingPrefix + i);
+        },
+        postCreate: function(scene, sceneState) {
+            scene.physics.add.overlap(
+                this.ball,
+                sceneState.units,
+                function(ball, unitObj) {
+                    ball.setActive(false);
+                    ball.setVisible(false);
+                    ball.disableBody(true, true);
+                    
+                    unitObj.__player_unit.takeDamage(10);
+                }
+            );
         },
         attack: function(scene) {
             this.container.body.setVelocity(0, 0);

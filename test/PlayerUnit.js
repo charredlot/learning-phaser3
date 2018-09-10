@@ -18,11 +18,15 @@ function PlayerUnit({displayName,
     this.has_move_target = false;
     this.move_speed = 50;
     this.maxShield = maxShield;
+    this.currentShield = maxShield;
     this.skills = skills;
 }
 PlayerUnit.prototype.UNIT_SELECTED_IMG = "pink_cursor";
 PlayerUnit.prototype.statusDomID = function () {
     return 'unitstatus_' + this.name;
+}
+PlayerUnit.prototype.shieldDomID = function () {
+    return 'unitshield_' + this.name;
 }
 PlayerUnit.prototype.shieldAnimKey = function() {
     return this.displayName + "_shield";
@@ -77,4 +81,17 @@ PlayerUnit.prototype.showSkillsUI = function() {
     $('#skilltemplate').css('display', 'none');
     $('#skilllisttemplate').css('display', 'none');
     $('#skills').css('visibility', 'visible');    
+}
+PlayerUnit.prototype.updateShieldDom = function() {
+    let meter = $('#' + this.shieldDomID());
+    let percent = Math.round(this.currentShield * 100.0 / this.maxShield);
+    meter.find('.unit-shield-text').text(
+        this.currentShield + " / " + this.maxShield
+    );
+    meter.find('.unit-shield-curr').css('width', percent + '%');
+}
+PlayerUnit.prototype.takeDamage = function(damage) {
+    this.shieldAnimPlay();
+    this.currentShield -= damage;
+    this.updateShieldDom();
 }

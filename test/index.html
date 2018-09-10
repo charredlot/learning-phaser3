@@ -36,6 +36,26 @@
         .unitselected {
             border: 5px solid red;
         }
+        .unit-shield {
+            display: inline-block;
+            position: relative;
+            width: 150px;
+            height: 16px;
+            background: white; /* shield gauge empty color*/
+            border: 1px solid black;
+        }
+        .unit-shield-curr {
+            background: #6a9ef2; /* shield gauge full color */
+            width: 75%;
+            height: 16px;
+        }
+        .unit-shield-text {
+            position: absolute;
+            font-weight: bold;
+            text-align: center;
+            left: 0%; /* not exactly 50% since text takes up space */
+            width: 100%;
+        }
         .shieldbar {
             width: 100px;
             height: 40px;
@@ -76,11 +96,12 @@ window.onload = function() {
         portrait.attr('src', unit.portraitURL);
         status.find('.unitportrait').append(portrait);
         
-        let progress = status.find('progress');
-        progress.attr('max', unit.maxShield);
-        progress.attr('value', unit.maxShield);
+        let shield = status.find('.unit-shield');
+        shield.attr('id', unit.shieldDomID());
         
         $('#unitstatuses').append(status);
+        
+        unit.updateShieldDom();
         status.show();
     }
 };
@@ -184,6 +205,11 @@ function create () {
     for (let i in codes) {
         let key = this.input.keyboard.addKey(codes[i]);
         this.scene_state.skill_keys[codes[i]] = key;
+    }
+    
+    /* to do things like projectile collisions */
+    for (let i in sceneSetup.enemies) {
+        sceneSetup.enemies[i].postCreate(this, this.scene_state);
     }
 }
 
@@ -452,7 +478,10 @@ function update () {
         </div>
         <div>
             <label>Shield:</label>
-            <progress class="unitshield" value="75" max="100"></progress>
+            <div class="unit-shield">                
+                <span class="unit-shield-text">75 / 100</span>
+                <div class="unit-shield-curr"></div>
+            </div>
         </div>
     </div>
 </div>

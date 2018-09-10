@@ -3,11 +3,13 @@
 function Enemy({displayName,
                 preload,
                 create,
+                postCreate,
                 attack,
                 moveSpeed}) {
     this.displayName = displayName;
     this.preload = preload;
     this.create = create;
+    this.postCreate = postCreate;
     this.attack = attack;
     
     this.moveTarget = {x: 0, y: 0};
