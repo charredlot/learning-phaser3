@@ -111,7 +111,7 @@ function createEnemyCloud(i) {
         attack: function(scene) {
             if (this.ball.active) {
                 /* only one projectile at a time */
-                scope.state = Enemy.prototype.STATE_IDLE;
+                this.state = Enemy.prototype.STATE_IDLE;
                 return;
             }
             this.container.body.setVelocity(0, 0);
