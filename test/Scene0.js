@@ -57,8 +57,6 @@ function _initEnemies() {
                         ],
                         frameRate: 1,
                     });
-            
-                    sprite.anims.play(pulsatingPrefix + i);
                     
                     let scope = this;
                     sprite.on(
@@ -68,13 +66,32 @@ function _initEnemies() {
                                 return;
                             }
                             
+                            /* shoot at a random angle for now */
+                            let h = scope.sprite.displayHeight / 2;
+                            let angle = 2 * Math.PI * Math.random();
+                            let vx = Math.cos(angle);
+                            let vy = Math.sin(angle);
+                            let x = (scope.container.body.center.x +
+                                     (h * vx));
+                            let y = (scope.container.body.center.y +
+                                     (h * vy));
+
+                            scope.ball.x = x;
+                            scope.ball.y = y;
+                            scope.ball.setActive(true);
+                            scope.ball.setVisible(true);
+                            scope.ball.body.setVelocity(vx * 60, vy * 60);
+                            
                             scope.state = Enemy.prototype.STATE_IDLE;
                             sprite.anims.play(pulsatingPrefix + i);
                         }
                     );
                     
+                    scene.physics.world.enable(ball);
                     this.ball = ball;
                     this.createCommon(scene, container, sprite);
+                    
+                    sprite.anims.play(pulsatingPrefix + i);
                 },
                 attack: function(scene) {
                     this.container.body.setVelocity(0, 0);
